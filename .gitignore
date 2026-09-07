@@ -1,0 +1,9 @@
+.env
+uploads/*
+!uploads/.gitkeep
+vendor/
+.idea/
+.vscode/
+*.log
+tools/phpunit.phar
+.phpunit.cache/

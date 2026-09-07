@@ -32,6 +32,7 @@ $appName = $ctx->settings->get('app_name') ?: 'Gartenarbeitstag';
 <?= $view->renderPartial('partials/arrange-bar') ?>
 <script src="<?= e($baseUrl) ?>/assets/js/app.js"></script>
 <script src="<?= e($baseUrl) ?>/assets/js/tour.js"></script>
+<script src="<?= e($baseUrl) ?>/assets/js/live-search.js"></script>
 <?php foreach ($pageScripts ?? [] as $script): ?>
     <script src="<?= e($baseUrl) ?>/assets/js/<?= e($script) ?>"></script>
 <?php endforeach; ?>

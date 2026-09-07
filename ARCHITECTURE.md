@@ -176,6 +176,23 @@ Kontext (`$this->ctx`): `db`, `auth` (`user()`, `id()`, `role()`, `can($p)`, `is
 - Bestätigungen per `data-confirm="…"`, Modals per `data-open-modal`.
 - Icons: Emoji.
 
+## Live-Suche (Filterformulare)
+
+Jede serverseitige Suche/Filterung ist live: `public/assets/js/live-search.js` (global
+eingebunden) lädt bei Eingabe (entprellt) bzw. Auswahländerung die Seite per `fetch` neu und
+tauscht nur den Ergebnisbereich aus — URL wird per History-API nachgeführt, ohne JS
+funktioniert das Formular unverändert.
+
+```html
+<form method="get" data-live="users"> … <input type="search" name="q"> … </form>
+<div data-live-target="users"> Tabelle / Empty-State / Pagination </div>
+```
+
+- Pro Formular genau ein Ziel; das Formular liegt **außerhalb** des Ziels (Fokus bleibt).
+- Pagination-Links im Ziel bekommen `data-live-link`.
+- Nach dem Austausch feuert `document` das Event `live-search:updated` (`detail.target`),
+  falls Seiten-JS neue Zeilen initialisieren muss.
+
 ## Seiten-Blöcke (Anordnen-Modus)
 
 Inhaltliche Übersichtsseiten deklarieren ihre Abschnitte als Blöcke, damit Admins sie per

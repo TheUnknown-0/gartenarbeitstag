@@ -70,11 +70,12 @@ $fullName = static function (array $row, string $prefix = ''): string {
     <div class="card">
         <div class="card-header"><h2>Schüler:in zuweisen</h2></div>
         <div class="card-body">
-            <form method="get" action="<?= e($peopleUrl) ?>" class="cluster">
+            <form method="get" action="<?= e($peopleUrl) ?>" class="cluster" data-live="criteria-people">
                 <input class="input" type="search" name="q" value="<?= e($q) ?>" placeholder="Name, Benutzername oder Klasse" autofocus>
                 <button class="btn" type="submit">Suchen</button>
             </form>
 
+            <div data-live-target="criteria-people">
             <?php if ($q !== ''): ?>
                 <?php if ($results === []): ?>
                     <div class="empty-state">Keine passenden Schüler:innen (ohne dieses Kriterium) gefunden.</div>
@@ -109,6 +110,7 @@ $fullName = static function (array $row, string $prefix = ''): string {
             <?php else: ?>
                 <div class="hint mt-2">Suche nach Schüler:innen, um ihnen das Kriterium zuzuweisen. Bereits zugewiesene Personen erscheinen nicht in den Treffern.</div>
             <?php endif; ?>
+            </div>
         </div>
     </div>
 </div>

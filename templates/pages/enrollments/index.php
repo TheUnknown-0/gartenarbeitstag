@@ -52,7 +52,7 @@ $blocksLayout = page_blocks('admin-einschreibungen', [
 <?php elseif ($blockKey === 'filter'): ?>
     <div class="card mb-2">
         <div class="card-body">
-            <form method="get" action="<?= e($ctx->url('/admin/einschreibungen')) ?>" class="form-grid">
+            <form method="get" action="<?= e($ctx->url('/admin/einschreibungen')) ?>" class="form-grid" data-live="enrollments">
                 <div class="field">
                     <label for="f-stand">Stand</label>
                     <select class="input" id="f-stand" name="stand">
@@ -103,6 +103,7 @@ $blocksLayout = page_blocks('admin-einschreibungen', [
         </div>
     </div>
 <?php elseif ($blockKey === 'list'): ?>
+    <div data-live-target="enrollments">
     <div class="card">
         <div class="card-header">
             <h3><?= count($rows) ?> Einträge</h3>
@@ -183,6 +184,7 @@ $blocksLayout = page_blocks('admin-einschreibungen', [
                 <div class="card-footer text-soft text-sm">Es werden höchstens 1000 Einträge angezeigt — bitte Filter eingrenzen.</div>
             <?php endif; ?>
         <?php endif; ?>
+    </div>
     </div>
 <?php endif; ?>
 <?= block_close() ?>

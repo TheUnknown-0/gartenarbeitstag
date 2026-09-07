@@ -21,7 +21,7 @@ use App\Services\DayQueries;
 
 <div class="card mb-2">
     <div class="card-body">
-        <form method="get" action="<?= e($ctx->url('/admin/einschreibungen/offen')) ?>" class="cluster">
+        <form method="get" action="<?= e($ctx->url('/admin/einschreibungen/offen')) ?>" class="cluster" data-live="enrollments-open">
             <div class="field mb-0">
                 <label for="f-klasse">Klasse</label>
                 <select class="input" id="f-klasse" name="klasse">
@@ -39,6 +39,7 @@ use App\Services\DayQueries;
     </div>
 </div>
 
+<div data-live-target="enrollments-open">
 <div class="card">
     <div class="card-header"><h3><?= count($rows) ?> Schüler:innen</h3></div>
     <?php if ($rows === []): ?>
@@ -71,4 +72,5 @@ use App\Services\DayQueries;
             </table>
         </div>
     <?php endif; ?>
+</div>
 </div>

@@ -49,7 +49,7 @@ $timeShort = static fn (?string $t): string => $t === null || $t === '' ? '' : s
 <?php if ($blockKey === 'filter'): ?>
     <div class="card mb-2">
         <div class="card-body">
-            <form method="get" action="<?= e($base) ?>" class="form-grid">
+            <form method="get" action="<?= e($base) ?>" class="form-grid" data-live="stations">
                 <?php if (count($days) > 1): ?>
                     <div class="field">
                         <label for="f-tag">Aktionstag</label>
@@ -85,6 +85,7 @@ $timeShort = static fn (?string $t): string => $t === null || $t === '' ? '' : s
         </div>
     </div>
 <?php elseif ($blockKey === 'list'): ?>
+    <div data-live-target="stations">
     <?php if ($stations === []): ?>
         <div class="card"><div class="empty-state">Keine Stände gefunden.</div></div>
     <?php else: ?>
@@ -190,6 +191,7 @@ $timeShort = static fn (?string $t): string => $t === null || $t === '' ? '' : s
             </div>
         </div>
     <?php endif; ?>
+    </div>
 <?php endif; ?>
 <?= block_close() ?>
 <?php endforeach; ?>

@@ -134,9 +134,16 @@ final class AuthController extends Controller
 
         $user = $this->ctx->db->fetchOne('SELECT * FROM users WHERE username = ? LIMIT 1', [$username]);
         if ($user !== null && (int) $user['is_active'] === 1 && !empty($user['email'])) {
-            $code = (new LoginCodeService($this->ctx->db))->issue((int) $user['id'], $ip);
-            $this->emailService()->sendLoginCode($user, $code);
-            $this->ctx->audit->log('Anmeldecode angefordert', 'info', "Benutzer: {$username}", (int) $user['id'], $username);
+            $codeService = new LoginCodeService($this->ctx->db);
+            if (!$codeService->withinCooldown((int) $user['id'])) {
+                $code = $codeService->issue((int) $user['id'], $ip);
+                $this->emailService()->sendLoginCode($user, $code);
+                $this->ctx->audit->log('Anmeldecode angefordert', 'info', "Benutzer: {$username}", (int) $user['id'], $username);
+            } else {
+                // Bewusst kein Hinweis auf den Cooldown nach außen — sonst liesse sich
+                // daraus ablesen, dass das Konto (mit E-Mail) existiert.
+                $this->ctx->audit->log('Anmeldecode-Anfrage übersprungen (Cooldown)', 'info', "Benutzer: {$username}", (int) $user['id'], $username);
+            }
         } else {
             // Absichtlich keine Unterscheidung nach außen: unbekannter Benutzername,
             // deaktiviertes Konto oder fehlende E-Mail sehen für den Aufrufer gleich aus.

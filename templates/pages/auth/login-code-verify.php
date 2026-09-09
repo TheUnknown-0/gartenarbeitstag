@@ -26,3 +26,4 @@
     ·
     <a href="<?= e($ctx->url('/login')) ?>">Zurück zur Passwort-Anmeldung</a>
 </p>
+<p class="text-center text-faint text-sm">Zwischen zwei Codes liegt mindestens eine Minute.</p>

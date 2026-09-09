@@ -65,10 +65,13 @@ $stationCount = $stationCount ?? 0;
                 <select class="input" id="mode" name="mode" data-mode-select>
                     <option value="direct" <?= $mode === 'direct' ? 'selected' : '' ?>>Sofortbuchung — Schüler:innen buchen Plätze direkt (mit Warteliste)</option>
                     <option value="wishlist" <?= $mode === 'wishlist' ? 'selected' : '' ?>>Wunschliste — Schüler:innen geben Prioritäten ab, die Orga teilt automatisch zu</option>
+                    <option value="quota" <?= $mode === 'quota' ? 'selected' : '' ?>>Quote — Orga legt Anzahl je Klassenstufe fest, Verteilung erfolgt zentral</option>
                 </select>
                 <div class="hint">
                     <strong>Sofortbuchung:</strong> Wer zuerst kommt, bekommt den Platz; volle Stände führen auf die Warteliste.
                     <strong>Wunschliste:</strong> Alle geben Wünsche ab, danach verteilt die automatische Zuteilung fair nach Prioritäten.
+                    <strong>Quote:</strong> Schüler:innen wählen nichts selbst — die Orga legt unter „Quote“ je Stand, Zeitblock und
+                    Klassenstufe eine Zielzahl fest, ein Algorithmus verteilt zufällig passende Schüler:innen.
                 </div>
             </div>
 

@@ -15,7 +15,7 @@ $statusBadge = static function (string $status): string {
         default => '<span class="badge badge-info">Entwurf</span>',
     };
 };
-$modeLabel = static fn (string $mode): string => $mode === 'wishlist' ? 'Wunschliste' : 'Sofortbuchung';
+$modeLabel = static fn (string $mode): string => ['direct' => 'Sofortbuchung', 'wishlist' => 'Wunschliste', 'quota' => 'Quote'][$mode] ?? $mode;
 ?>
 <div class="page-header">
     <div class="page-title-group">

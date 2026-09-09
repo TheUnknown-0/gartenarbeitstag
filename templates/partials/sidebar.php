@@ -81,6 +81,7 @@ $navLayout = (new Customization($ctx->settings))->navLayout();
                     'staende' => [$u('/admin/staende'), '🌱', 'Stände', $can(P::STAENDE_SEHEN)],
                     'einschreibungen' => [$u('/admin/einschreibungen'), '📝', 'Einschreibungen', $can(P::EINSCHREIBUNGEN_SEHEN)],
                     'zuteilung' => [$u('/admin/zuteilung'), '🎯', 'Zuteilung', $can(P::ZUTEILUNG_AUSFUEHREN) && $day !== null && $day['mode'] === 'wishlist'],
+                    'quote' => [$u('/admin/quote'), '🧮', 'Quote', $can(P::ZUTEILUNG_AUSFUEHREN) && $day !== null && $day['mode'] === 'quota'],
                     'anwesenheit' => [$u('/admin/anwesenheit'), '✅', 'Anwesenheit', $can(P::ANWESENHEIT_SEHEN)],
                     'kriterien' => [$u('/admin/kriterien'), '🚫', 'Ausschlusskriterien', $can(P::KRITERIEN_SEHEN)],
                     'benutzer' => [$u('/admin/benutzer'), '👥', 'Benutzer', $can(P::BENUTZER_SEHEN)],

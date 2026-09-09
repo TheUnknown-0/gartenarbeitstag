@@ -7,6 +7,7 @@
  */
 $time = static fn (mixed $t): string => substr((string) $t, 0, 5);
 $isWishlist = $day['mode'] === 'wishlist';
+$isQuota = $day['mode'] === 'quota';
 $minBlocks = (int) $day['min_blocks_per_student'];
 $maxBlocks = $day['max_blocks_per_student'] !== null ? (int) $day['max_blocks_per_student'] : null;
 $wishesPerBlock = max(1, (int) $day['wishes_per_block']);
@@ -19,7 +20,9 @@ $waitlistEnabled = (int) $day['waitlist_enabled'] === 1;
         <div class="page-eyebrow"><?= e($day['name']) ?> · <?= e(format_date($day['event_date'])) ?></div>
         <h1 class="page-title">Einschreibung</h1>
         <p class="page-sub">
-            <?php if ($isWishlist): ?>
+            <?php if ($isQuota): ?>
+                Die Verteilung erfolgt zentral durch die Orga anhand von Klassenstufen-Quoten — du wählst nichts selbst aus.
+            <?php elseif ($isWishlist): ?>
                 Wähle je Zeitblock bis zu <?= e((string) $wishesPerBlock) ?> Wünsche in deiner Reihenfolge — die Plätze werden danach automatisch verteilt.
             <?php else: ?>
                 Schreib dich je Zeitblock bei einem Stand ein. Du kannst dich jederzeit wieder austragen, solange die Anmeldung geöffnet ist.
@@ -31,7 +34,9 @@ $waitlistEnabled = (int) $day['waitlist_enabled'] === 1;
     </div>
 </div>
 
-<?php if (!$selfService): ?>
+<?php if ($isQuota): ?>
+    <div class="alert alert-info"><span aria-hidden="true">🧮</span><div>Die Verteilung erfolgt zentral durch die Orga. Sobald sie feststeht, erscheint dein Ergebnis hier.</div></div>
+<?php elseif (!$selfService): ?>
     <div class="alert alert-info"><span aria-hidden="true">ℹ️</span><div>Die Einschreibung läuft über deine Lehrkraft. Hier siehst du, was für dich eingetragen ist.</div></div>
 <?php elseif ($window['state'] === 'before'): ?>
     <div class="alert alert-info"><span aria-hidden="true">⏳</span><div>Die Einschreibung öffnet am <?= e(format_datetime($window['start'])) ?>. Du kannst dir die Stände schon einmal anschauen.</div></div>

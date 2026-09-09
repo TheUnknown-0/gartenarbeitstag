@@ -13,7 +13,7 @@ $statusBadge = static function (string $status): string {
         default => '<span class="badge badge-info">Entwurf</span>',
     };
 };
-$modeLabel = static fn (string $mode): string => $mode === 'wishlist' ? 'Wunschliste' : 'Sofortbuchung';
+$modeLabel = static fn (string $mode): string => ['direct' => 'Sofortbuchung', 'wishlist' => 'Wunschliste', 'quota' => 'Quote'][$mode] ?? $mode;
 $severityBadge = static fn (string $severity): string => match ($severity) {
     'critical' => '<span class="badge badge-danger">kritisch</span>',
     'warning' => '<span class="badge badge-warning">Warnung</span>',
@@ -84,14 +84,14 @@ $dashboardBlocks = page_blocks('admin-dashboard', $blockCatalog);
             <div>
                 <div class="text-sm text-soft">Zuteilung</div>
                 <div>
-                    <?php if ($day['mode'] !== 'wishlist'): ?>
+                    <?php if ($day['mode'] === 'direct'): ?>
                         <span class="text-faint">nicht erforderlich (Sofortbuchung)</span>
                     <?php elseif (!empty($day['assignment_done_at'])): ?>
                         <span class="badge badge-success">erfolgt</span> <?= e(format_datetime($day['assignment_done_at'])) ?>
                     <?php else: ?>
                         <span class="badge badge-warning">noch nicht ausgeführt</span>
                         <?php if ($canRunAssignment): ?>
-                            <a class="text-sm" href="<?= e($ctx->url('/admin/zuteilung')) ?>">Jetzt zuteilen</a>
+                            <a class="text-sm" href="<?= e($ctx->url($day['mode'] === 'quota' ? '/admin/quote' : '/admin/zuteilung')) ?>">Jetzt zuteilen</a>
                         <?php endif; ?>
                     <?php endif; ?>
                 </div>

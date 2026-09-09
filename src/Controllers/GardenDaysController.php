@@ -13,7 +13,7 @@ use App\Services\DayCloner;
  */
 final class GardenDaysController extends Controller
 {
-    private const MODES = ['direct', 'wishlist'];
+    private const MODES = ['direct', 'wishlist', 'quota'];
     private const STATUSES = ['draft', 'active', 'archived'];
 
     public function index(array $params): string

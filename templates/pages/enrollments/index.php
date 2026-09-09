@@ -6,7 +6,7 @@
 use App\Services\DayQueries;
 
 $badgeClass = ['assigned' => 'badge-success', 'waitlist' => 'badge-warning', 'wish' => 'badge-info'];
-$sourceLabels = ['self' => 'selbst', 'auto' => 'automatisch', 'orga' => 'Orga'];
+$sourceLabels = ['self' => 'selbst', 'auto' => 'automatisch', 'orga' => 'Orga', 'quota' => 'Quote'];
 $currentUrl = $ctx->url('/admin/einschreibungen') . '?' . http_build_query(array_filter($filter, static fn ($v) => $v !== '' && $v !== 0));
 $blocksLayout = page_blocks('admin-einschreibungen', [
     'stats' => 'Kennzahlen',
@@ -18,7 +18,7 @@ $blocksLayout = page_blocks('admin-einschreibungen', [
     <div class="page-title-group">
         <div class="page-eyebrow">Verwaltung</div>
         <h1 class="page-title">📝 Einschreibungen</h1>
-        <p class="page-sub"><?= e($day['name']) ?> · <?= e(format_date($day['event_date'])) ?> · Modus: <?= $day['mode'] === 'wishlist' ? 'Wunschliste' : 'Sofortbuchung' ?></p>
+        <p class="page-sub"><?= e($day['name']) ?> · <?= e(format_date($day['event_date'])) ?> · Modus: <?= e(['direct' => 'Sofortbuchung', 'wishlist' => 'Wunschliste', 'quota' => 'Quote'][$day['mode']] ?? $day['mode']) ?></p>
     </div>
     <div class="page-actions">
         <a class="btn btn-ghost" href="<?= e($ctx->url('/admin/einschreibungen/offen')) ?>">Offene Einschreibungen</a>

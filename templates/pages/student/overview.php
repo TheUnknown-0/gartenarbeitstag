@@ -8,6 +8,7 @@ $time = static fn (mixed $t): string => substr((string) $t, 0, 5);
 $minBlocks = (int) $day['min_blocks_per_student'];
 $maxBlocks = $day['max_blocks_per_student'] !== null ? (int) $day['max_blocks_per_student'] : null;
 $isWishlist = $day['mode'] === 'wishlist';
+$isQuota = $day['mode'] === 'quota';
 $progress = $minBlocks > 0 ? min(100, (int) round($assignedBlocks / $minBlocks * 100)) : 100;
 $firstName = $student['firstname'] !== '' ? $student['firstname'] : $student['username'];
 
@@ -59,7 +60,9 @@ $widgets = page_blocks('uebersicht', [
                 </div>
             </div>
             <p class="text-soft text-sm mt-2">
-                <?php if ($isWishlist): ?>
+                <?php if ($isQuota): ?>
+                    Die Verteilung erfolgt zentral durch die Orga — du musst nichts auswählen, dein Ergebnis erscheint hier.
+                <?php elseif ($isWishlist): ?>
                     Du gibst pro Zeitblock deine Wünsche ab (<?= e((string) $day['wishes_per_block']) ?> Prioritäten) — die Plätze werden danach automatisch verteilt.
                 <?php else: ?>
                     Du schreibst dich direkt bei einem Stand ein — wer zuerst kommt, bekommt den Platz<?= (int) $day['waitlist_enabled'] === 1 ? '; ist ein Stand voll, kannst du auf die Warteliste' : '' ?>.
@@ -81,7 +84,7 @@ $widgets = page_blocks('uebersicht', [
             <?php if ($maxBlocks !== null): ?>
                 <div class="text-soft text-sm mt-2">Höchstens <?= e((string) $maxBlocks) ?> Zeitblöcke sind möglich.</div>
             <?php endif; ?>
-            <?php if ($isWishlist && !empty($day['assignment_done_at'])): ?>
+            <?php if (($isWishlist || $isQuota) && !empty($day['assignment_done_at'])): ?>
                 <div class="text-soft text-sm mt-2">Zuteilung erfolgt am <?= e(format_datetime($day['assignment_done_at'])) ?>.</div>
             <?php endif; ?>
         </div>
@@ -125,7 +128,13 @@ $widgets = page_blocks('uebersicht', [
                             <?php else: ?>
                                 <td class="text-soft">—</td>
                                 <td></td>
-                                <td><a class="btn btn-sm" href="<?= e($ctx->url('/einschreibung')) ?>#block-<?= e((string) $blockId) ?>"><?= $isWishlist ? 'Wünsche wählen' : 'Einschreiben' ?></a></td>
+                                <td>
+                                    <?php if ($isQuota): ?>
+                                        <span class="text-faint text-sm">wird zentral verteilt</span>
+                                    <?php else: ?>
+                                        <a class="btn btn-sm" href="<?= e($ctx->url('/einschreibung')) ?>#block-<?= e((string) $blockId) ?>"><?= $isWishlist ? 'Wünsche wählen' : 'Einschreiben' ?></a>
+                                    <?php endif; ?>
+                                </td>
                             <?php endif; ?>
                         </tr>
                     <?php endforeach; ?>

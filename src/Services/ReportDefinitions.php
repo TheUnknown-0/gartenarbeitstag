@@ -24,7 +24,7 @@ final class ReportDefinitions
 
     private const STATUS_LABELS = ['assigned' => 'fest', 'waitlist' => 'Warteliste', 'wish' => 'Wunsch'];
 
-    private const SOURCE_LABELS = ['self' => 'Selbst', 'auto' => 'Automatisch', 'orga' => 'Orga'];
+    private const SOURCE_LABELS = ['self' => 'Selbst', 'auto' => 'Automatisch', 'orga' => 'Orga', 'quota' => 'Quote'];
 
     /**
      * Spalten-Metadaten je Quelle, in Standardreihenfolge.

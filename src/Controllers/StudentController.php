@@ -134,7 +134,7 @@ final class StudentController extends Controller
             'availability' => $availability,
             'mine' => $mine,
             'assignedBlocks' => $this->assignedBlockCount($mine),
-            'selfService' => $this->ctx->settings->getBool('student_self_service', true),
+            'selfService' => $day['mode'] === 'quota' ? false : $this->ctx->settings->getBool('student_self_service', true),
             'window' => $this->windowState($day),
             'assignmentDone' => !empty($day['assignment_done_at']),
         ]);
@@ -438,6 +438,11 @@ final class StudentController extends Controller
         foreach ($stations as $stationId => $station) {
             if (($student['role'] ?? 'student') !== 'student') {
                 $result[$stationId] = ['available' => true, 'reason' => ''];
+                continue;
+            }
+            // Quotenmodus: Schüler:innen wählen nichts selbst, die Orga verteilt zentral.
+            if ($day['mode'] === 'quota') {
+                $result[$stationId] = ['available' => false, 'reason' => 'Zentrale Verteilung durch die Orga'];
                 continue;
             }
             // Irgendein angebotener Block reicht für die Grundprüfung

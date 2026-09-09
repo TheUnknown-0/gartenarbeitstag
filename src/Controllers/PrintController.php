@@ -31,6 +31,7 @@ final class PrintController extends Controller
         'self' => 'Selbst',
         'auto' => 'Automatisch',
         'orga' => 'Orga',
+        'quota' => 'Quote',
     ];
 
     // =====================================================================

@@ -31,6 +31,8 @@ final class AttendanceController extends Controller
         $blocks = DayQueries::blocksOf($db, $dayId);
         $stations = DayQueries::stationsOf($db, $dayId, true);
         $classes = DayQueries::classesOf($db);
+        $grades = DayQueries::gradesOf($db);
+        $grade = (int) ($_GET['stufe'] ?? 0);
 
         $block = null;
         foreach ($blocks as $b) {
@@ -66,6 +68,8 @@ final class AttendanceController extends Controller
             'blocks' => $blocks,
             'stations' => $stations,
             'classes' => $classes,
+            'grades' => $grades,
+            'grade' => $grade,
             'block' => $block,
             'station' => $station,
             'class' => $class,

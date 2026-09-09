@@ -1,7 +1,7 @@
 <?php
 /**
  * Schüler:innen unter der Mindestzahl fester Blöcke.
- * Erwartet: $day, $rows, $class, $classes, $minBlocks, $canEdit.
+ * Erwartet: $day, $rows, $class, $grade, $classes, $grades, $minBlocks, $canEdit.
  */
 use App\Services\DayQueries;
 ?>
@@ -32,6 +32,15 @@ use App\Services\DayQueries;
                 </select>
             </div>
             <div class="field mb-0">
+                <label for="f-stufe">Stufe</label>
+                <select class="input" id="f-stufe" name="stufe">
+                    <option value="0">Alle Stufen</option>
+                    <?php foreach ($grades as $g): ?>
+                        <option value="<?= (int) $g ?>"<?= $grade === $g ? ' selected' : '' ?>><?= e((string) $g) ?></option>
+                    <?php endforeach; ?>
+                </select>
+            </div>
+            <div class="field mb-0">
                 <label>&nbsp;</label>
                 <button class="btn btn-primary" type="submit">Filtern</button>
             </div>
@@ -41,7 +50,10 @@ use App\Services\DayQueries;
 
 <div data-live-target="enrollments-open">
 <div class="card">
-    <div class="card-header"><h3><?= count($rows) ?> Schüler:innen</h3></div>
+    <div class="card-header">
+        <h3><?= count($rows) ?> Schüler:innen</h3>
+        <a class="btn btn-ghost btn-sm" href="<?= e($ctx->url('/admin/druck/offen.pdf') . '?' . http_build_query(array_filter(['klasse' => $class, 'stufe' => $grade], static fn ($v) => $v !== '' && $v !== 0))) ?>">📄 Als PDF</a>
+    </div>
     <?php if ($rows === []): ?>
         <div class="card-body"><div class="empty-state">Alle Schüler:innen haben die Mindestzahl an Blöcken erreicht. 🎉</div></div>
     <?php else: ?>

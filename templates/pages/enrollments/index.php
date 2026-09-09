@@ -1,7 +1,7 @@
 <?php
 /**
  * Einschreibungen — Übersicht mit Filter.
- * Erwartet: $day, $rows, $stats, $filter, $stations, $blocks, $classes, $statusLabels, $canEdit.
+ * Erwartet: $day, $rows, $stats, $filter, $stations, $blocks, $classes, $grades, $statusLabels, $canEdit.
  */
 use App\Services\DayQueries;
 
@@ -81,6 +81,15 @@ $blocksLayout = page_blocks('admin-einschreibungen', [
                     </select>
                 </div>
                 <div class="field">
+                    <label for="f-stufe">Stufe</label>
+                    <select class="input" id="f-stufe" name="stufe">
+                        <option value="0">Alle Stufen</option>
+                        <?php foreach ($grades as $g): ?>
+                            <option value="<?= (int) $g ?>"<?= $filter['stufe'] === $g ? ' selected' : '' ?>><?= e((string) $g) ?></option>
+                        <?php endforeach; ?>
+                    </select>
+                </div>
+                <div class="field">
                     <label for="f-status">Status</label>
                     <select class="input" id="f-status" name="status">
                         <?php foreach (['assigned' => 'Fest', 'waitlist' => 'Warteliste', 'wish' => 'Wünsche', 'alle' => 'Alle'] as $key => $label): ?>
@@ -107,6 +116,7 @@ $blocksLayout = page_blocks('admin-einschreibungen', [
     <div class="card">
         <div class="card-header">
             <h3><?= count($rows) ?> Einträge</h3>
+            <a class="btn btn-ghost btn-sm" href="<?= e($ctx->url('/admin/druck/einschreibungen.pdf') . '?' . http_build_query(array_filter($filter, static fn ($v) => $v !== '' && $v !== 0))) ?>">📄 Als PDF</a>
         </div>
         <?php if ($rows === []): ?>
             <div class="card-body">

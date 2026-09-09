@@ -86,6 +86,12 @@ $timeShort = static fn (?string $t): string => $t === null || $t === '' ? '' : s
     </div>
 <?php elseif ($blockKey === 'list'): ?>
     <div data-live-target="stations">
+    <div class="cluster mb-2" style="justify-content:space-between;">
+        <span class="text-soft text-sm"><?= count($stations) ?> Stände</span>
+        <?php if ($auth->can(P::BERICHTE_DRUCKEN)): ?>
+            <a class="btn btn-ghost btn-sm" href="<?= e($ctx->url('/admin/druck/staende-uebersicht.pdf') . '?' . http_build_query(array_filter(['q' => $q, 'aktiv' => $onlyActive ? '1' : '', 'tag' => $tagQuery !== '' ? (int) $day['id'] : ''], static fn ($v) => $v !== ''))) ?>">📄 Als PDF</a>
+        <?php endif; ?>
+    </div>
     <?php if ($stations === []): ?>
         <div class="card"><div class="empty-state">Keine Stände gefunden.</div></div>
     <?php else: ?>

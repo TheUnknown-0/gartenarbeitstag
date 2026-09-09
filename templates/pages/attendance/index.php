@@ -1,7 +1,7 @@
 <?php
 /**
  * Anwesenheit (Orga): Auswahl Block + Stand/Klasse → Abhak-Liste; ohne Auswahl Übersicht.
- * Erwartet: $day, $blocks, $stations, $classes, $block, $station, $class, $mode, $roster, $summary, $canEdit.
+ * Erwartet: $day, $blocks, $stations, $classes, $grades, $grade, $block, $station, $class, $mode, $roster, $summary, $canEdit.
  */
 use App\Services\DayQueries;
 
@@ -15,6 +15,7 @@ $selfUrl = $ctx->url('/admin/anwesenheit');
     </div>
     <div class="page-actions">
         <a class="btn btn-ghost" href="<?= e($ctx->url('/admin/druck/anwesenheit.csv')) ?>">CSV-Export</a>
+        <a class="btn btn-ghost" href="<?= e($ctx->url('/admin/druck/anwesenheit.pdf')) ?>">📄 Als PDF (alle)</a>
         <a class="btn btn-ghost" href="<?= e($ctx->url('/admin/druck')) ?>">Listen &amp; Druck</a>
     </div>
 </div>
@@ -51,10 +52,21 @@ $selfUrl = $ctx->url('/admin/anwesenheit');
                 <div class="hint">Wird nur genutzt, wenn kein Stand gewählt ist.</div>
             </div>
             <div class="field">
+                <label for="stufe">Stufe</label>
+                <select class="input" id="stufe" name="stufe">
+                    <option value="0">Alle Stufen</option>
+                    <?php foreach ($grades as $g): ?>
+                        <option value="<?= (int) $g ?>"<?= $grade === $g ? ' selected' : '' ?>><?= e((string) $g) ?></option>
+                    <?php endforeach; ?>
+                </select>
+                <div class="hint">Wird nur für den PDF-Export genutzt.</div>
+            </div>
+            <div class="field">
                 <label>&nbsp;</label>
                 <div class="cluster">
                     <button class="btn btn-primary" type="submit">Anzeigen</button>
                     <a class="btn btn-ghost" href="<?= e($selfUrl) ?>">Übersicht</a>
+                    <button class="btn btn-ghost" type="submit" formaction="<?= e($ctx->url('/admin/druck/anwesenheit.pdf')) ?>">📄 Als PDF</button>
                 </div>
             </div>
         </form>

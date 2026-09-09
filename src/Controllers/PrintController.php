@@ -383,7 +383,335 @@ final class PrintController extends Controller
     }
 
     // =====================================================================
-    // 4. Exporte (CSV / XLSX)
+    // 4. Einschreibungen (PDF, gefiltert wie die Übersichtsseite)
+    // =====================================================================
+
+    /** GET /admin/druck/einschreibungen.pdf?stand=&block=&klasse=&stufe=&status=&q= */
+    public function enrollmentsPdf(array $params): never
+    {
+        $day = $this->boot();
+        $dayId = (int) $day['id'];
+        $db = $this->ctx->db;
+
+        $filter = [
+            'stand' => (int) ($_GET['stand'] ?? 0),
+            'block' => (int) ($_GET['block'] ?? 0),
+            'klasse' => trim((string) ($_GET['klasse'] ?? '')),
+            'stufe' => (int) ($_GET['stufe'] ?? 0),
+            'status' => (string) ($_GET['status'] ?? 'assigned'),
+            'q' => trim((string) ($_GET['q'] ?? '')),
+        ];
+        if (!in_array($filter['status'], ['assigned', 'waitlist', 'wish', 'alle'], true)) {
+            $filter['status'] = 'assigned';
+        }
+
+        $rows = DayQueries::filteredEnrollments($db, $dayId, $filter, null);
+
+        $pdf = $this->newPdf($day, 'Einschreibungen', 'L');
+        $pdf->AddPage('L');
+        $pdf->heading('Einschreibungen');
+        $pdf->note($this->filterSummary($filter, $rows));
+        $pdf->Ln(2);
+        $this->ctx->audit->log('druck.einschreibungen_pdf', 'info', sprintf('Einschreibungen-PDF erzeugt (%d Zeilen)', count($rows)));
+
+        if ($rows === []) {
+            $pdf->emptyState('Keine Einschreibungen für diese Auswahl.');
+            $pdf->emit('Einschreibungen_' . date('Y-m-d') . '.pdf');
+        }
+
+        $pdf->setColumns([
+            ['Name', 65.0, 'L'],
+            ['Klasse', 18.0, 'C'],
+            ['Stufe', 14.0, 'C'],
+            ['Stand', 55.0, 'L'],
+            ['Ort', 30.0, 'L'],
+            ['Zeitblock', 50.0, 'L'],
+            ['Status', 25.0, 'C'],
+            ['Quelle', 20.0, 'C'],
+        ]);
+        $pdf->drawHead();
+
+        foreach ($rows as $row) {
+            $pdf->ensureSpace(7.0, true);
+            $pdf->drawRow([
+                trim((string) $row['lastname'] . ', ' . (string) $row['firstname']),
+                (string) ($row['class'] ?? ''),
+                $row['grade'] !== null ? (string) (int) $row['grade'] : '',
+                (string) $row['station_name'],
+                (string) ($row['location'] ?? ''),
+                DayQueries::blockLabel(['name' => $row['block_name'], 'start_time' => $row['start_time'], 'end_time' => $row['end_time']]),
+                self::STATUS_LABELS[(string) $row['status']] ?? (string) $row['status'],
+                self::SOURCE_LABELS[(string) $row['source']] ?? (string) $row['source'],
+            ], 6.2);
+        }
+
+        $pdf->emit('Einschreibungen_' . date('Y-m-d') . '.pdf');
+    }
+
+    // =====================================================================
+    // 5. Offene Einschreibungen (PDF)
+    // =====================================================================
+
+    /** GET /admin/druck/offen.pdf?klasse=&stufe= */
+    public function openPdf(array $params): never
+    {
+        $day = $this->boot();
+        $db = $this->ctx->db;
+
+        $class = trim((string) ($_GET['klasse'] ?? ''));
+        $grade = (int) ($_GET['stufe'] ?? 0);
+        $min = (int) ($day['min_blocks_per_student'] ?? 1);
+
+        $rows = DayQueries::underEnrolled($db, $day, $class !== '' ? $class : null, $grade > 0 ? $grade : null);
+
+        $pdf = $this->newPdf($day, 'Offene Einschreibungen');
+        $pdf->AddPage();
+        $pdf->heading('Offene Einschreibungen');
+        $pdf->note(
+            'Schüler:innen mit weniger als ' . $min . ' festen Zeitblöcken.'
+            . ($class !== '' ? ' Klasse ' . $class . '.' : '')
+            . ($grade > 0 ? ' Stufe ' . $grade . '.' : ''),
+        );
+        $pdf->Ln(2);
+        $this->ctx->audit->log('druck.offen_pdf', 'info', sprintf('Offene-Einschreibungen-PDF erzeugt (%d Zeilen)', count($rows)));
+
+        if ($rows === []) {
+            $pdf->emptyState('Alle Schüler:innen haben die Mindestzahl an Blöcken erreicht.');
+            $pdf->emit('Offene_Einschreibungen_' . date('Y-m-d') . '.pdf');
+        }
+
+        $pdf->setColumns([
+            ['Nr.', 10.0, 'R'],
+            ['Name', 70.0, 'L'],
+            ['Klasse', 25.0, 'C'],
+            ['Stufe', 20.0, 'C'],
+            ['Feste Blöcke', 30.0, 'C'],
+            ['Fehlend', 25.0, 'C'],
+        ]);
+        $pdf->drawHead();
+
+        foreach ($rows as $i => $row) {
+            $assigned = (int) $row['assigned_blocks'];
+            $pdf->ensureSpace(7.0, true);
+            $pdf->drawRow([
+                (string) ($i + 1),
+                DayQueries::personName($row),
+                (string) ($row['class'] ?? ''),
+                $row['grade'] !== null ? (string) (int) $row['grade'] : '',
+                (string) $assigned,
+                (string) max(0, $min - $assigned),
+            ]);
+        }
+
+        $pdf->emit('Offene_Einschreibungen_' . date('Y-m-d') . '.pdf');
+    }
+
+    // =====================================================================
+    // 6. Anwesenheitsliste (PDF, optional gefiltert)
+    // =====================================================================
+
+    /** GET /admin/druck/anwesenheit.pdf?block=&stand=&klasse=&stufe= */
+    public function attendancePdf(array $params): never
+    {
+        $day = $this->boot();
+        $dayId = (int) $day['id'];
+        $db = $this->ctx->db;
+
+        $blockId = (int) ($_GET['block'] ?? 0);
+        $stationId = (int) ($_GET['stand'] ?? 0);
+        $class = trim((string) ($_GET['klasse'] ?? ''));
+        $grade = (int) ($_GET['stufe'] ?? 0);
+
+        $sql = "SELECT u.lastname, u.firstname, u.class, u.grade,
+                       s.name AS station, tb.sort_order AS block_sort,
+                       tb.name AS block_name, tb.start_time, tb.end_time,
+                       a.present, a.note
+                FROM enrollments e
+                JOIN users u ON u.id = e.user_id
+                JOIN stations s ON s.id = e.station_id
+                JOIN time_blocks tb ON tb.id = e.time_block_id
+                LEFT JOIN attendance a ON a.enrollment_id = e.id
+                WHERE e.garden_day_id = ? AND e.status = 'assigned'";
+        $args = [$dayId];
+        if ($blockId > 0) {
+            $sql .= ' AND e.time_block_id = ?';
+            $args[] = $blockId;
+        }
+        if ($stationId > 0) {
+            $sql .= ' AND e.station_id = ?';
+            $args[] = $stationId;
+        }
+        if ($class !== '') {
+            $sql .= ' AND u.class = ?';
+            $args[] = $class;
+        }
+        if ($grade > 0) {
+            $sql .= ' AND u.grade = ?';
+            $args[] = $grade;
+        }
+        $sql .= ' ORDER BY tb.sort_order, tb.start_time, s.sort_order, s.name, u.class, u.lastname, u.firstname';
+
+        $rows = $db->fetchAll($sql, $args);
+
+        $pdf = $this->newPdf($day, 'Anwesenheitsliste', 'L');
+        $pdf->AddPage('L');
+        $pdf->heading('Anwesenheitsliste');
+        $meta = [];
+        if ($blockId > 0 && $rows !== []) {
+            $meta[] = DayQueries::blockLabel($rows[0]);
+        }
+        if ($stationId > 0 && $rows !== []) {
+            $meta[] = 'Stand ' . $rows[0]['station'];
+        }
+        if ($class !== '') {
+            $meta[] = 'Klasse ' . $class;
+        }
+        if ($grade > 0) {
+            $meta[] = 'Stufe ' . $grade;
+        }
+        $pdf->note($meta === [] ? 'Alle festen Einschreibungen des Aktionstags.' : implode(' · ', $meta));
+        $pdf->Ln(2);
+        $this->ctx->audit->log('druck.anwesenheit_pdf', 'info', sprintf('Anwesenheitsliste-PDF erzeugt (%d Zeilen)', count($rows)));
+
+        if ($rows === []) {
+            $pdf->emptyState('Keine festen Einschreibungen für diese Auswahl.');
+            $pdf->emit('Anwesenheitsliste_' . date('Y-m-d') . '.pdf');
+        }
+
+        $pdf->setColumns([
+            ['Zeitblock', 45.0, 'L'],
+            ['Stand', 55.0, 'L'],
+            ['Name', 60.0, 'L'],
+            ['Klasse', 20.0, 'C'],
+            ['Stufe', 16.0, 'C'],
+            ['Anwesend', 26.0, 'C'],
+            ['Notiz', 55.0, 'L'],
+        ]);
+        $pdf->drawHead();
+
+        foreach ($rows as $row) {
+            $present = $row['present'] === null ? null : (int) $row['present'] === 1;
+            $pdf->ensureSpace(7.0, true);
+            $pdf->drawRow([
+                DayQueries::blockLabel($row),
+                (string) $row['station'],
+                trim((string) $row['lastname'] . ', ' . (string) $row['firstname']),
+                (string) ($row['class'] ?? ''),
+                $row['grade'] !== null ? (string) (int) $row['grade'] : '',
+                $present === null ? 'offen' : ($present ? 'ja' : 'nein'),
+                (string) ($row['note'] ?? ''),
+            ], 6.2, $present === false);
+        }
+
+        $pdf->emit('Anwesenheitsliste_' . date('Y-m-d') . '.pdf');
+    }
+
+    // =====================================================================
+    // 7. Stände-Übersicht (Stammdaten, PDF)
+    // =====================================================================
+
+    /** GET /admin/druck/staende-uebersicht.pdf?q=&aktiv=1 */
+    public function stationsOverviewPdf(array $params): never
+    {
+        $this->requirePermission(P::BERICHTE_DRUCKEN);
+        $day = $this->resolveDay();
+        $dayId = (int) $day['id'];
+        $db = $this->ctx->db;
+
+        $q = trim((string) ($_GET['q'] ?? ''));
+        $onlyActive = (string) ($_GET['aktiv'] ?? '') === '1';
+
+        $sql = 'SELECT s.* FROM stations s WHERE s.garden_day_id = ?';
+        $args = [$dayId];
+        if ($q !== '') {
+            $sql .= ' AND (s.name LIKE ? OR s.location LIKE ? OR s.description LIKE ?)';
+            $like = '%' . $q . '%';
+            array_push($args, $like, $like, $like);
+        }
+        if ($onlyActive) {
+            $sql .= ' AND s.is_active = 1';
+        }
+        $sql .= ' ORDER BY s.sort_order, s.name';
+        $stations = $db->fetchAll($sql, $args);
+
+        $leaders = [];
+        foreach ($db->fetchAll(
+            'SELECT sl.station_id, u.firstname, u.lastname, u.username FROM station_leaders sl
+             JOIN users u ON u.id = sl.user_id
+             JOIN stations s ON s.id = sl.station_id
+             WHERE s.garden_day_id = ? ORDER BY u.lastname, u.firstname',
+            [$dayId],
+        ) as $row) {
+            $name = trim($row['firstname'] . ' ' . $row['lastname']);
+            $leaders[(int) $row['station_id']][] = $name !== '' ? $name : $row['username'];
+        }
+
+        $criteria = [];
+        foreach ($db->fetchAll(
+            'SELECT se.station_id, ec.name FROM station_exclusions se
+             JOIN exclusion_criteria ec ON ec.id = se.criterion_id
+             JOIN stations s ON s.id = se.station_id
+             WHERE s.garden_day_id = ? ORDER BY ec.sort_order, ec.name',
+            [$dayId],
+        ) as $row) {
+            $criteria[(int) $row['station_id']][] = $row['name'];
+        }
+
+        $capacity = [];
+        foreach ($db->fetchAll(
+            'SELECT sb.station_id, SUM(sb.capacity) AS total FROM station_blocks sb
+             JOIN stations s ON s.id = sb.station_id
+             WHERE s.garden_day_id = ? GROUP BY sb.station_id',
+            [$dayId],
+        ) as $row) {
+            $capacity[(int) $row['station_id']] = (int) $row['total'];
+        }
+
+        $pdf = $this->newPdf($day, 'Stände-Übersicht', 'L');
+        $pdf->AddPage('L');
+        $pdf->heading('Stände-Übersicht');
+        $meta = [];
+        if ($q !== '') {
+            $meta[] = 'Suche „' . $q . '"';
+        }
+        if ($onlyActive) {
+            $meta[] = 'nur aktive Stände';
+        }
+        $pdf->note($meta === [] ? 'Alle Stände dieses Aktionstags.' : implode(' · ', $meta));
+        $pdf->Ln(2);
+        $this->ctx->audit->log('druck.staende_uebersicht_pdf', 'info', sprintf('Stände-Übersicht-PDF erzeugt (%d Stände)', count($stations)));
+
+        if ($stations === []) {
+            $pdf->emptyState('Keine Stände für diese Auswahl.');
+            $pdf->emit('Staende_Uebersicht_' . date('Y-m-d') . '.pdf');
+        }
+
+        $pdf->setColumns([
+            ['Stand', 60.0, 'L'],
+            ['Ort', 35.0, 'L'],
+            ['Standleitung', 60.0, 'L'],
+            ['Kapazität gesamt', 30.0, 'C'],
+            ['Ausschlusskriterien', 92.0, 'L'],
+        ]);
+        $pdf->drawHead();
+
+        foreach ($stations as $station) {
+            $sid = (int) $station['id'];
+            $pdf->ensureSpace(7.0, true);
+            $pdf->drawRow([
+                (string) $station['name'] . ((int) $station['is_active'] !== 1 ? ' (inaktiv)' : ''),
+                (string) ($station['location'] ?? ''),
+                implode(', ', $leaders[$sid] ?? []),
+                isset($capacity[$sid]) ? (string) $capacity[$sid] : '-',
+                implode(', ', $criteria[$sid] ?? []),
+            ], 6.4);
+        }
+
+        $pdf->emit('Staende_Uebersicht_' . date('Y-m-d') . '.pdf');
+    }
+
+    // =====================================================================
+    // 8. Exporte (CSV / XLSX)
     // =====================================================================
 
     /** GET /admin/druck/einschreibungen.csv */
@@ -517,6 +845,56 @@ final class PrintController extends Controller
     // =====================================================================
     // Helfer
     // =====================================================================
+
+    /**
+     * Beschreibungstext der aktiven Filter für die Kopfnotiz des Einschreibungen-PDFs.
+     *
+     * @param array{stand: int, block: int, klasse: string, stufe: int, status: string, q: string} $filter
+     * @param list<array<string, mixed>> $rows Erste passende Zeile liefert Stand-/Blocknamen für die Anzeige.
+     */
+    private function filterSummary(array $filter, array $rows): string
+    {
+        $parts = [];
+        $parts[] = 'Status: ' . ($filter['status'] === 'alle' ? 'alle' : (self::STATUS_LABELS[$filter['status']] ?? $filter['status']));
+        if ($filter['stand'] > 0 && $rows !== []) {
+            $parts[] = 'Stand ' . $rows[0]['station_name'];
+        }
+        if ($filter['block'] > 0 && $rows !== []) {
+            $parts[] = DayQueries::blockLabel(['name' => $rows[0]['block_name'], 'start_time' => $rows[0]['start_time'], 'end_time' => $rows[0]['end_time']]);
+        }
+        if ($filter['klasse'] !== '') {
+            $parts[] = 'Klasse ' . $filter['klasse'];
+        }
+        if ($filter['stufe'] > 0) {
+            $parts[] = 'Stufe ' . $filter['stufe'];
+        }
+        if ($filter['q'] !== '') {
+            $parts[] = 'Suche „' . $filter['q'] . '"';
+        }
+
+        return implode(' · ', $parts);
+    }
+
+    /**
+     * Wie StationsController::resolveDay() — Stände-Übersicht kann sich wahlweise
+     * auf einen per ?tag= gewählten Entwurfstag statt den aktiven Tag beziehen.
+     *
+     * @return array<string, mixed>
+     */
+    private function resolveDay(): array
+    {
+        $tag = (int) ($_GET['tag'] ?? 0);
+        if ($tag > 0) {
+            $day = $this->ctx->db->fetchOne("SELECT * FROM garden_days WHERE id = ? AND status <> 'archived'", [$tag]);
+            if ($day === null) {
+                throw new HttpException(404, 'Aktionstag nicht gefunden oder archiviert.');
+            }
+
+            return $day;
+        }
+
+        return $this->ctx->requireActiveDay();
+    }
 
     /** Standard-Guards für PDF-Berichte. @return array<string, mixed> Aktiver Aktionstag. */
     private function boot(): array

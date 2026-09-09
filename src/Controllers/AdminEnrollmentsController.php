@@ -39,6 +39,7 @@ final class AdminEnrollmentsController extends Controller
             'stand' => (int) ($_GET['stand'] ?? 0),
             'block' => (int) ($_GET['block'] ?? 0),
             'klasse' => trim((string) ($_GET['klasse'] ?? '')),
+            'stufe' => (int) ($_GET['stufe'] ?? 0),
             'status' => (string) ($_GET['status'] ?? 'assigned'),
             'q' => trim((string) ($_GET['q'] ?? '')),
         ];
@@ -46,44 +47,7 @@ final class AdminEnrollmentsController extends Controller
             $filter['status'] = 'assigned';
         }
 
-        $where = ['e.garden_day_id = ?'];
-        $args = [$dayId];
-        if ($filter['stand'] > 0) {
-            $where[] = 'e.station_id = ?';
-            $args[] = $filter['stand'];
-        }
-        if ($filter['block'] > 0) {
-            $where[] = 'e.time_block_id = ?';
-            $args[] = $filter['block'];
-        }
-        if ($filter['klasse'] !== '') {
-            $where[] = 'u.class = ?';
-            $args[] = $filter['klasse'];
-        }
-        if ($filter['status'] !== 'alle') {
-            $where[] = 'e.status = ?';
-            $args[] = $filter['status'];
-        }
-        if ($filter['q'] !== '') {
-            $where[] = "(u.username LIKE ? OR u.firstname LIKE ? OR u.lastname LIKE ? OR CONCAT(u.firstname, ' ', u.lastname) LIKE ?)";
-            $like = '%' . $filter['q'] . '%';
-            array_push($args, $like, $like, $like, $like);
-        }
-
-        $rows = $db->fetchAll(
-            'SELECT e.*, u.username, u.firstname, u.lastname, u.class, u.grade,
-                    s.name AS station_name, s.location, tb.name AS block_name, tb.start_time, tb.end_time, tb.sort_order AS block_sort,
-                    c.username AS created_by_name
-             FROM enrollments e
-             JOIN users u ON u.id = e.user_id
-             JOIN stations s ON s.id = e.station_id
-             JOIN time_blocks tb ON tb.id = e.time_block_id
-             LEFT JOIN users c ON c.id = e.created_by
-             WHERE ' . implode(' AND ', $where) . '
-             ORDER BY tb.sort_order, tb.start_time, s.sort_order, s.name, e.status, e.priority, u.class, u.lastname, u.firstname
-             LIMIT 1000',
-            $args,
-        );
+        $rows = DayQueries::filteredEnrollments($db, $dayId, $filter);
 
         $stats = $db->fetchOne(
             "SELECT SUM(status = 'assigned') AS assigned, SUM(status = 'waitlist') AS waitlist, SUM(status = 'wish') AS wish
@@ -102,6 +66,7 @@ final class AdminEnrollmentsController extends Controller
             'stations' => DayQueries::stationsOf($db, $dayId),
             'blocks' => DayQueries::blocksOf($db, $dayId),
             'classes' => DayQueries::classesOf($db),
+            'grades' => DayQueries::gradesOf($db),
             'statusLabels' => self::STATUS_LABELS,
             'canEdit' => $this->ctx->auth->can(P::EINSCHREIBUNGEN_BEARBEITEN),
         ]);
@@ -114,8 +79,9 @@ final class AdminEnrollmentsController extends Controller
         $day = $this->ctx->requireActiveDay();
         $db = $this->ctx->db;
         $class = trim((string) ($_GET['klasse'] ?? ''));
+        $grade = (int) ($_GET['stufe'] ?? 0);
 
-        $rows = DayQueries::underEnrolled($db, $day, $class !== '' ? $class : null);
+        $rows = DayQueries::underEnrolled($db, $day, $class !== '' ? $class : null, $grade > 0 ? $grade : null);
         $blocks = DayQueries::blocksOf($db, (int) $day['id']);
 
         return $this->render('pages/enrollments/open', [
@@ -123,7 +89,9 @@ final class AdminEnrollmentsController extends Controller
             'day' => $day,
             'rows' => $rows,
             'class' => $class,
+            'grade' => $grade,
             'classes' => DayQueries::classesOf($db),
+            'grades' => DayQueries::gradesOf($db),
             'minBlocks' => min((int) $day['min_blocks_per_student'], count($blocks)),
             'canEdit' => $this->ctx->auth->can(P::EINSCHREIBUNGEN_BEARBEITEN),
         ]);

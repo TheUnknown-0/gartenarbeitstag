@@ -10,6 +10,9 @@
         <h1 class="page-title">🖨️ Listen &amp; Druck</h1>
         <p class="page-sub">PDF-Berichte und Tabellen-Exporte für den aktuellen Aktionstag.</p>
     </div>
+    <div class="page-actions">
+        <a class="btn btn-primary" href="<?= e($ctx->url('/admin/druck/eigene-liste')) ?>">🧩 Eigene Liste</a>
+    </div>
 </div>
 
 <?php if (!$canPrint): ?>
@@ -24,7 +27,8 @@
     'staende' => 'Standlisten',
     'klassen' => 'Klassenlisten',
     'belegung' => 'Belegungsübersicht',
-    'exporte' => 'Exporte (CSV / XLSX)',
+    'staende-uebersicht' => 'Stände-Übersicht',
+    'exporte' => 'Exporte (CSV / XLSX / PDF)',
 ]); ?>
 <div class="grid-2">
 <?php foreach ($blocks as $blockKey => $blockLabel): ?>
@@ -102,6 +106,25 @@
         </div>
     </section>
 
+<?php elseif ($blockKey === 'staende-uebersicht'): ?>
+    <section class="card">
+        <div class="card-header"><h2>📋 Stände-Übersicht</h2></div>
+        <div class="card-body">
+            <p class="text-soft text-sm">
+                Stammdaten aller Stände: Ort, Standleitung, Kapazität gesamt und Ausschlusskriterien
+                — ohne Teilnehmerlisten. Mit eigenem Filter (Suche, nur aktive) direkt auf der
+                <a href="<?= e($ctx->url('/admin/staende')) ?>">Stände-Seite</a>.
+            </p>
+            <form method="get" action="<?= e($base . '/staende-uebersicht.pdf') ?>" class="stack">
+                <?php if ($canPrint): ?>
+                    <button class="btn btn-primary" type="submit">PDF erzeugen</button>
+                <?php else: ?>
+                    <p class="text-faint text-sm">Keine Berechtigung zum Erzeugen.</p>
+                <?php endif; ?>
+            </form>
+        </div>
+    </section>
+
 <?php elseif ($blockKey === 'exporte'): ?>
     <section class="card" style="grid-column:1 / -1;">
         <div class="card-header"><h2>📁 Exporte (CSV / XLSX)</h2></div>
@@ -117,13 +140,20 @@
                     <div class="cluster">
                         <a class="btn btn-ghost btn-sm" href="<?= e($base . '/einschreibungen.csv') ?>">CSV</a>
                         <a class="btn btn-ghost btn-sm" href="<?= e($base . '/einschreibungen.xlsx') ?>">XLSX</a>
+                        <?php if ($canPrint): ?>
+                            <a class="btn btn-ghost btn-sm" href="<?= e($base . '/einschreibungen.pdf') ?>">PDF</a>
+                        <?php endif; ?>
                     </div>
+                    <p class="text-faint text-sm mb-0">Nach Stand, Block, Klasse, Stufe und Status gefiltert: über die <a href="<?= e($ctx->url('/admin/einschreibungen')) ?>">Einschreibungen-Übersicht</a>.</p>
                 </div>
                 <div class="stack">
                     <strong>Offene Einschreibungen</strong>
                     <p class="text-soft text-sm mb-0">Schüler:innen unter der Mindestzahl fester Blöcke.</p>
                     <div class="cluster">
                         <a class="btn btn-ghost btn-sm" href="<?= e($base . '/offen.csv') ?>">CSV</a>
+                        <?php if ($canPrint): ?>
+                            <a class="btn btn-ghost btn-sm" href="<?= e($base . '/offen.pdf') ?>">PDF</a>
+                        <?php endif; ?>
                     </div>
                 </div>
                 <div class="stack">
@@ -131,7 +161,11 @@
                     <p class="text-soft text-sm mb-0">Alle festen Einschreibungen mit Anwesenheitsstatus, Notiz und Markierung.</p>
                     <div class="cluster">
                         <a class="btn btn-ghost btn-sm" href="<?= e($base . '/anwesenheit.csv') ?>">CSV</a>
+                        <?php if ($canPrint): ?>
+                            <a class="btn btn-ghost btn-sm" href="<?= e($base . '/anwesenheit.pdf') ?>">PDF</a>
+                        <?php endif; ?>
                     </div>
+                    <p class="text-faint text-sm mb-0">Nach Block, Stand, Klasse und Stufe gefiltert: über die <a href="<?= e($ctx->url('/admin/anwesenheit')) ?>">Anwesenheit-Seite</a>.</p>
                 </div>
             </div>
         </div>

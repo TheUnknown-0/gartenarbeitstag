@@ -699,7 +699,9 @@ final class PrintController extends Controller
             $sid = (int) $station['id'];
             $pdf->ensureSpace(7.0, true);
             $pdf->drawRow([
-                (string) $station['name'] . ((int) $station['is_active'] !== 1 ? ' (inaktiv)' : ''),
+                (string) $station['name']
+                    . ((int) $station['is_active'] !== 1 ? ' (inaktiv)' : '')
+                    . ((int) $station['manual_only'] === 1 ? ' (nur manuell)' : ''),
                 (string) ($station['location'] ?? ''),
                 implode(', ', $leaders[$sid] ?? []),
                 isset($capacity[$sid]) ? (string) $capacity[$sid] : '-',

@@ -446,6 +446,12 @@ final class StudentController extends Controller
                 $result[$stationId] = ['available' => false, 'reason' => 'Wird aktuell nicht angeboten'];
                 continue;
             }
+            // Nur manuell besetzbare Stände: im Wunschmodus weiterhin wählbar (Standleitung/Orga
+            // entscheidet später), aber ohne Selbstbedienung nicht direkt buchbar.
+            if ($day['mode'] !== 'wishlist' && (int) ($station['manual_only'] ?? 0) === 1) {
+                $result[$stationId] = ['available' => false, 'reason' => 'Nur durch Standleitung/Orga einschreibbar'];
+                continue;
+            }
             $violations = $limits->check($student, $station, (int) $blockId, $day, 'wish');
             $codes = array_column($violations, 'code');
 

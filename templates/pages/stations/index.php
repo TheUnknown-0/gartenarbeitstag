@@ -124,6 +124,7 @@ $timeShort = static fn (?string $t): string => $t === null || $t === '' ? '' : s
                             <td>
                                 <strong><?= e($station['name']) ?></strong>
                                 <?php if ((int) $station['is_active'] !== 1): ?> <span class="badge">Inaktiv</span><?php endif; ?>
+                                <?php if ((int) $station['manual_only'] === 1): ?> <span class="badge badge-info" title="Nur Standleitung/Orga können hier fest einschreiben">🔒 Nur manuell</span><?php endif; ?>
                                 <?php if ($underMin): ?>
                                     <span class="badge badge-warning" title="Mindestbesetzung <?= e((string) $station['min_students']) ?> in mindestens einem Zeitblock nicht erreicht">⚠ unter Mindestbesetzung</span>
                                 <?php endif; ?>

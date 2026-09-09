@@ -33,6 +33,7 @@ final class LimitCheck
     public const MAX_BLOCKS = 'max_blocks';
     public const WINDOW_CLOSED = 'window_closed';
     public const DAY_NOT_ACTIVE = 'day_not_active';
+    public const MANUAL_ONLY = 'manual_only';
 
     /** Verstöße, die niemals übersteuert werden können. */
     public const HARD = [
@@ -42,6 +43,7 @@ final class LimitCheck
         self::DUPLICATE,
         self::TIME_CONFLICT,
         self::DAY_NOT_ACTIVE,
+        self::MANUAL_ONLY,
     ];
 
     public function __construct(private readonly Database $db)
@@ -55,9 +57,11 @@ final class LimitCheck
      * @param array<string, mixed> $station   Zeile aus stations
      * @param array<string, mixed> $day       Zeile aus garden_days
      * @param string $status                  assigned | waitlist | wish
-     * @param array{ignore_enrollment_id?: int, self_service?: bool, now?: string} $options
+     * @param array{ignore_enrollment_id?: int, self_service?: bool, manual?: bool, now?: string} $options
      *        ignore_enrollment_id: beim Umbuchen die bestehende Einschreibung nicht mitzählen
      *        self_service: Schüler bucht selbst → Anmeldefenster prüfen
+     *        manual: bewusste Einzelplatzierung durch Standleitung/Orga → erlaubt
+     *                feste Einschreibung in "nur manuell besetzbare" Stände
      * @return list<array{code: string, message: string, hard: bool}>
      */
     public function check(array $student, array $station, int $timeBlockId, array $day, string $status = 'assigned', array $options = []): array
@@ -71,6 +75,7 @@ final class LimitCheck
         $stationId = (int) $station['id'];
         $ignoreId = isset($options['ignore_enrollment_id']) ? (int) $options['ignore_enrollment_id'] : 0;
         $selfService = (bool) ($options['self_service'] ?? false);
+        $manual = (bool) ($options['manual'] ?? false);
 
         // --- Rahmen: Aktionstag, Stand, Block ---------------------------------
         if (($day['status'] ?? '') !== 'active') {
@@ -153,6 +158,13 @@ final class LimitCheck
         // Wünsche zählen nicht gegen Kapazität und Limits
         if ($status !== 'assigned') {
             return $violations;
+        }
+
+        // --- Nur manuell besetzbare Stände (hart) -------------------------------
+        // Wünsche äußern dürfen Schüler:innen trotzdem (oben abgefangen) — nur die
+        // feste Zuteilung braucht eine bewusste Einzelentscheidung von Standleitung/Orga.
+        if ((int) ($station['manual_only'] ?? 0) === 1 && !$manual) {
+            $add(self::MANUAL_ONLY, 'Dieser Stand kann nur durch Standleitung oder Orga fest eingeschrieben werden.');
         }
 
         // --- Kapazität & Klassen-/Stufenlimits (weich) --------------------------

@@ -30,6 +30,8 @@ final class EnrollmentService
      *   priority?: int|null,        nur für Wünsche (1..n)
      *   source?: string,            self | auto | orga
      *   self_service?: bool,        Schüler:in bucht selbst (Anmeldefenster prüfen)
+     *   manual?: bool,              bewusste Einzelplatzierung (Standleitung/Orga) — erlaubt
+     *                               feste Einschreibung in "nur manuell besetzbare" Stände
      *   override?: bool,            weiche Verstöße bewusst übersteuern (Orga)
      *   override_note?: string|null,
      *   created_by?: int|null,
@@ -49,10 +51,12 @@ final class EnrollmentService
         $station = $this->station($stationId);
         $override = (bool) ($options['override'] ?? false);
         $selfService = (bool) ($options['self_service'] ?? false);
+        $manual = (bool) ($options['manual'] ?? false);
 
-        return $this->db->transaction(function () use ($day, $student, $station, $timeBlockId, $status, $options, $override, $selfService): array {
+        return $this->db->transaction(function () use ($day, $student, $station, $timeBlockId, $status, $options, $override, $selfService, $manual): array {
             $violations = $this->limits->check($student, $station, $timeBlockId, $day, $status, [
                 'self_service' => $selfService,
+                'manual' => $manual,
             ]);
 
             if (LimitCheck::hasHard($violations)) {
@@ -65,7 +69,7 @@ final class EnrollmentService
                 $onlyCapacity = array_diff($soft, [LimitCheck::CAPACITY, LimitCheck::CLASS_LIMIT, LimitCheck::GRADE_LIMIT]) === [];
                 if ($onlyCapacity && ($options['auto_waitlist'] ?? false) && (int) ($day['waitlist_enabled'] ?? 0) === 1) {
                     $status = 'waitlist';
-                    $violations = $this->limits->check($student, $station, $timeBlockId, $day, 'waitlist', ['self_service' => $selfService]);
+                    $violations = $this->limits->check($student, $station, $timeBlockId, $day, 'waitlist', ['self_service' => $selfService, 'manual' => $manual]);
                     if ($violations !== []) {
                         throw new LimitViolation($violations);
                     }
@@ -139,7 +143,7 @@ final class EnrollmentService
      * wird bei der Prüfung ignoriert, damit ein Wechsel innerhalb desselben
      * Blocks kein Zeitkonflikt ist.
      *
-     * @param array{override?: bool, override_note?: string|null, created_by?: int|null, self_service?: bool} $options
+     * @param array{override?: bool, override_note?: string|null, created_by?: int|null, self_service?: bool, manual?: bool} $options
      * @return array{id: int, status: string, violations: list<array{code: string, message: string, hard: bool}>}
      */
     public function rebook(int $enrollmentId, array $day, int $newStationId, int $newTimeBlockId, array $options = []): array
@@ -157,6 +161,7 @@ final class EnrollmentService
             $violations = $this->limits->check($student, $station, $newTimeBlockId, $day, 'assigned', [
                 'ignore_enrollment_id' => $enrollmentId,
                 'self_service' => (bool) ($options['self_service'] ?? false),
+                'manual' => (bool) ($options['manual'] ?? false),
             ]);
             if (LimitCheck::hasHard($violations) || ($violations !== [] && !$override)) {
                 throw new LimitViolation($violations);

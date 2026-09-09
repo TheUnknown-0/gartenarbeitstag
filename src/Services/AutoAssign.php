@@ -130,7 +130,9 @@ final class AutoAssign
 
         $blocks = $this->db->fetchAll('SELECT * FROM time_blocks WHERE garden_day_id = ? ORDER BY sort_order, start_time, id', [$dayId]);
         $stations = [];
-        foreach ($this->db->fetchAll('SELECT * FROM stations WHERE garden_day_id = ? AND is_active = 1', [$dayId]) as $station) {
+        // manual_only-Stände sind der automatischen Zuteilung bewusst nicht zugänglich —
+        // dort entscheidet ausschließlich Standleitung/Orga, wer einen festen Platz bekommt.
+        foreach ($this->db->fetchAll('SELECT * FROM stations WHERE garden_day_id = ? AND is_active = 1 AND manual_only = 0', [$dayId]) as $station) {
             $stations[(int) $station['id']] = $station;
         }
         $students = [];
@@ -334,7 +336,7 @@ final class AutoAssign
              ) AS free
              FROM station_blocks sb
              JOIN stations s ON s.id = sb.station_id
-             WHERE sb.time_block_id = ? AND s.garden_day_id = ? AND s.is_active = 1
+             WHERE sb.time_block_id = ? AND s.garden_day_id = ? AND s.is_active = 1 AND s.manual_only = 0
              HAVING free > 0
              ORDER BY free DESC, RAND(?)",
             [$blockId, (int) $day['id'], mt_rand()],

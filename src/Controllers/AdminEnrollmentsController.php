@@ -151,6 +151,7 @@ final class AdminEnrollmentsController extends Controller
                 'created_by' => $this->ctx->auth->id(),
                 'override' => $override,
                 'override_note' => $note,
+                'manual' => true,
             ]);
         } catch (LimitViolation $e) {
             return $this->renderCreateForm($day, $input, $e);
@@ -192,7 +193,7 @@ final class AdminEnrollmentsController extends Controller
             return $this->jsonError('Schüler:in oder Stand nicht gefunden.', 404);
         }
 
-        $violations = (new LimitCheck($db))->check($student, $station, $blockId, $day, 'assigned', ['ignore_enrollment_id' => $ignore]);
+        $violations = (new LimitCheck($db))->check($student, $station, $blockId, $day, 'assigned', ['ignore_enrollment_id' => $ignore, 'manual' => true]);
         $counts = (new LimitCheck($db))->counts($stationId, $blockId, $ignore);
         $capacity = $db->fetchValue('SELECT capacity FROM station_blocks WHERE station_id = ? AND time_block_id = ?', [$stationId, $blockId]);
 
@@ -258,6 +259,7 @@ final class AdminEnrollmentsController extends Controller
                 'override' => $override,
                 'override_note' => $note,
                 'created_by' => $this->ctx->auth->id(),
+                'manual' => true,
             ]);
         } catch (LimitViolation $e) {
             return $this->renderRebookForm($day, $enrollment, $input, $e);
@@ -319,6 +321,7 @@ final class AdminEnrollmentsController extends Controller
 
         $violations = (new LimitCheck($db))->check($student, $station, (int) $enrollment['time_block_id'], $day, 'assigned', [
             'ignore_enrollment_id' => (int) $enrollment['id'],
+            'manual' => true,
         ]);
 
         $input = [

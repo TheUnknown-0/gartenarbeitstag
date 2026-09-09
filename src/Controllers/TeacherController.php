@@ -205,6 +205,7 @@ final class TeacherController extends Controller
                 'source' => 'orga',
                 'created_by' => (int) $user['id'],
                 'auto_waitlist' => (int) $day['waitlist_enabled'] === 1,
+                'manual' => true,
             ]);
             $name = trim($student['firstname'] . ' ' . $student['lastname']);
             $this->flash(
@@ -264,6 +265,7 @@ final class TeacherController extends Controller
 
         $violations = (new LimitCheck($this->ctx->db))->check($student, $station, $blockId, $day, 'assigned', [
             'ignore_enrollment_id' => (int) $enrollment['id'],
+            'manual' => true,
         ]);
         if ($violations !== []) {
             // Ohne Override blockieren auch weiche Verstöße — Übersteuern nur in der Verwaltung.

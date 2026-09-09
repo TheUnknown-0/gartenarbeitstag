@@ -62,6 +62,7 @@ final class ReportDefinitions
                 'capacity' => ['label' => 'Kapazität gesamt', 'weight' => 0.9, 'align' => 'C'],
                 'criteria' => ['label' => 'Ausschlusskriterien', 'weight' => 2.0, 'align' => 'L'],
                 'active' => ['label' => 'Aktiv', 'weight' => 0.7, 'align' => 'C'],
+                'manual_only' => ['label' => 'Nur manuell', 'weight' => 0.8, 'align' => 'C'],
             ],
             'attendance' => [
                 'name' => ['label' => 'Name', 'weight' => 2.0, 'align' => 'L'],
@@ -220,6 +221,7 @@ final class ReportDefinitions
                 'capacity' => isset($capacity[$sid]) ? (string) $capacity[$sid] : '',
                 'criteria' => implode(', ', $criteria[$sid] ?? []),
                 'active' => (int) $station['is_active'] === 1 ? 'ja' : 'nein',
+                'manual_only' => (int) $station['manual_only'] === 1 ? 'ja' : 'nein',
             ];
         }
 

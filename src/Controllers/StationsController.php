@@ -117,12 +117,12 @@ final class StationsController extends Controller
 
         $id = $this->ctx->db->transaction(function () use ($day, $data): int {
             $this->ctx->db->run(
-                'INSERT INTO stations (garden_day_id, name, description, location, materials, max_per_class, max_per_grade, allowed_grades, allowed_classes, min_students, is_active, sort_order)
-                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+                'INSERT INTO stations (garden_day_id, name, description, location, materials, max_per_class, max_per_grade, allowed_grades, allowed_classes, min_students, is_active, manual_only, sort_order)
+                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
                 [
                     (int) $day['id'], $data['name'], $data['description'], $data['location'], $data['materials'],
                     $data['max_per_class'], $data['max_per_grade'], $data['allowed_grades'], $data['allowed_classes'],
-                    $data['min_students'], $data['is_active'], $data['sort_order'],
+                    $data['min_students'], $data['is_active'], $data['manual_only'], $data['sort_order'],
                 ],
             );
             $id = $this->ctx->db->lastInsertId();
@@ -171,12 +171,12 @@ final class StationsController extends Controller
         $this->ctx->db->transaction(function () use ($stationId, $day, $data): void {
             $this->ctx->db->run(
                 'UPDATE stations SET name = ?, description = ?, location = ?, materials = ?, max_per_class = ?, max_per_grade = ?,
-                        allowed_grades = ?, allowed_classes = ?, min_students = ?, is_active = ?, sort_order = ?
+                        allowed_grades = ?, allowed_classes = ?, min_students = ?, is_active = ?, manual_only = ?, sort_order = ?
                  WHERE id = ?',
                 [
                     $data['name'], $data['description'], $data['location'], $data['materials'],
                     $data['max_per_class'], $data['max_per_grade'], $data['allowed_grades'], $data['allowed_classes'],
-                    $data['min_students'], $data['is_active'], $data['sort_order'], $stationId,
+                    $data['min_students'], $data['is_active'], $data['manual_only'], $data['sort_order'], $stationId,
                 ],
             );
             $this->saveRelations($stationId, (int) $day['id'], $data);
@@ -363,6 +363,7 @@ final class StationsController extends Controller
             'allowed_classes' => $allowedClasses !== [] ? implode(',', $allowedClasses) : null,
             'min_students' => $minStudents,
             'is_active' => (int) ($_POST['is_active'] ?? 0) === 1 ? 1 : 0,
+            'manual_only' => (int) ($_POST['manual_only'] ?? 0) === 1 ? 1 : 0,
             'sort_order' => max(0, min(999, (int) ($_POST['sort_order'] ?? 0))),
             'blocks' => $blocks,
             'criteria' => array_values(array_unique(array_map('intval', (array) ($_POST['criteria'] ?? [])))),

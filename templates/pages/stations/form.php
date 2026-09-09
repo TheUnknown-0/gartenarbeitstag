@@ -30,6 +30,7 @@ $blockCapacity = static function (int $blockId) use ($old, $stationBlocks): stri
 $criteriaSelected = isset($old['name']) ? array_map('intval', (array) ($old['criteria'] ?? [])) : $selectedCriteria;
 $leadersSelected = isset($old['name']) ? array_map('intval', (array) ($old['leaders'] ?? [])) : $selectedLeaders;
 $isActive = isset($old['name']) ? (int) ($old['is_active'] ?? 0) === 1 : ($isNew || (int) $station['is_active'] === 1);
+$manualOnly = isset($old['name']) ? (int) ($old['manual_only'] ?? 0) === 1 : (!$isNew && (int) $station['manual_only'] === 1);
 ?>
 <div class="page-header">
     <div class="page-title-group">
@@ -78,6 +79,17 @@ $isActive = isset($old['name']) ? (int) ($old['is_active'] ?? 0) === 1 : ($isNew
                                 <input type="checkbox" name="is_active" value="1" <?= $isActive ? 'checked' : '' ?>>
                                 <span>Stand ist aktiv (für Schüler:innen buchbar)</span>
                             </label>
+                        </div>
+                        <div class="field">
+                            <label class="checkbox-row mt-2">
+                                <input type="checkbox" name="manual_only" value="1" <?= $manualOnly ? 'checked' : '' ?>>
+                                <span>Nur manuell besetzbar</span>
+                            </label>
+                            <div class="hint">
+                                Schüler:innen können sich nicht selbst fest einschreiben und werden nicht automatisch
+                                zugeteilt — nur Standleitung oder Orga/Admin mit Berechtigung können hier fest
+                                einschreiben. Wünsche äußern bleibt weiterhin möglich.
+                            </div>
                         </div>
                     </div>
                 </div>

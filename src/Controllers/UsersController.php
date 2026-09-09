@@ -825,8 +825,17 @@ final class UsersController extends Controller
     /** @param array<string, mixed> $data */
     private function validate(array $data): ?string
     {
-        if ($data['username'] === '' || $data['firstname'] === '' || $data['lastname'] === '') {
-            return 'Benutzername, Vorname und Nachname sind Pflichtfelder.';
+        if ($data['username'] === '') {
+            return 'Benutzername ist ein Pflichtfeld.';
+        }
+        // Lehrkräfte und Admins brauchen nur einen der beiden Namen — bei allen
+        // anderen Rollen (Schüler:in, Orga) bleiben beide verpflichtend.
+        if (in_array($data['role'], ['teacher', 'admin'], true)) {
+            if ($data['firstname'] === '' && $data['lastname'] === '') {
+                return 'Bitte Vorname oder Nachname angeben.';
+            }
+        } elseif ($data['firstname'] === '' || $data['lastname'] === '') {
+            return 'Vorname und Nachname sind Pflichtfelder.';
         }
         if (preg_match('/^[a-zA-Z0-9._@-]{3,100}$/', (string) $data['username']) !== 1) {
             return 'Der Benutzername darf 3–100 Zeichen lang sein (Buchstaben, Zahlen, Punkt, Minus, Unterstrich, @).';
@@ -1107,9 +1116,14 @@ final class UsersController extends Controller
                 'reason' => '',
             ];
 
+            // Lehrkräfte und Admins brauchen nur einen der beiden Namen, siehe validate().
+            $namesOk = in_array($row['role'], ['teacher', 'admin'], true)
+                ? ($row['firstname'] !== '' || $row['lastname'] !== '')
+                : ($row['firstname'] !== '' && $row['lastname'] !== '');
+
             $problems = [];
-            if ($row['username'] === '' || $row['firstname'] === '' || $row['lastname'] === '') {
-                $problems[] = 'Pflichtfelder fehlen (username, vorname, nachname)';
+            if ($row['username'] === '' || !$namesOk) {
+                $problems[] = 'Pflichtfelder fehlen (username, vorname/nachname)';
             } elseif (preg_match('/^[a-zA-Z0-9._@-]{3,100}$/', $row['username']) !== 1) {
                 $problems[] = 'ungültiger Benutzername';
             }

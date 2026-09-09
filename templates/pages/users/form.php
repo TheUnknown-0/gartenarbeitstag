@@ -9,6 +9,7 @@ $isNew = $user === null;
 $value = static fn (string $key, mixed $fallback = ''): string => (string) ($old[$key] ?? ($user[$key] ?? $fallback) ?? '');
 $currentRole = (string) ($old['role'] ?? ($user['role'] ?? 'student'));
 $isSelf = !$isNew && $auth->id() === (int) $user['id'];
+$namesOptional = in_array($currentRole, ['teacher', 'admin'], true);
 $isActive = $old !== [] ? (($old['is_active'] ?? '') === '1') : ($isNew ? true : (int) $user['is_active'] === 1);
 $mustChange = $old !== [] ? (($old['must_change_password'] ?? '') === '1') : ($isNew ? true : (int) $user['must_change_password'] === 1);
 
@@ -54,14 +55,19 @@ if ($old !== [] && isset($old['kriterien']) && is_array($old['kriterien'])) {
 <?php if ($blockKey === 'name'): ?>
     <div class="form-grid">
         <div class="field">
-            <label for="firstname">Vorname *</label>
-            <input class="input" type="text" id="firstname" name="firstname" required maxlength="100"
+            <label for="firstname" data-name-label>Vorname<?= $namesOptional ? '' : ' *' ?></label>
+            <input class="input" type="text" id="firstname" name="firstname" maxlength="100"
+                   data-name-field<?= $namesOptional ? '' : ' required' ?>
                    value="<?= e($value('firstname')) ?>">
         </div>
         <div class="field">
-            <label for="lastname">Nachname *</label>
-            <input class="input" type="text" id="lastname" name="lastname" required maxlength="100"
+            <label for="lastname" data-name-label>Nachname<?= $namesOptional ? '' : ' *' ?></label>
+            <input class="input" type="text" id="lastname" name="lastname" maxlength="100"
+                   data-name-field<?= $namesOptional ? '' : ' required' ?>
                    value="<?= e($value('lastname')) ?>">
+        </div>
+        <div class="hint" data-name-hint<?= $namesOptional ? '' : ' hidden' ?>>
+            Bei Lehrkräften und Admin-Konten genügt Vorname oder Nachname — das jeweils andere Feld bleibt dann leer.
         </div>
     </div>
 

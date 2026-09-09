@@ -25,12 +25,23 @@
         var roleSelect = form.querySelector('[data-role-select]');
         var criteriaSection = form.querySelector('[data-criteria-section]');
         var criteriaPlaceholder = form.querySelector('[data-criteria-placeholder]');
+        var nameFields = form.querySelectorAll('[data-name-field]');
+        var nameLabels = form.querySelectorAll('[data-name-label]');
+        var nameHint = form.querySelector('[data-name-hint]');
 
         function applyRole() {
             if (!roleSelect) { return; }
             var isStudent = roleSelect.value === 'student';
             if (criteriaSection) { criteriaSection.hidden = !isStudent; }
             if (criteriaPlaceholder) { criteriaPlaceholder.hidden = isStudent; }
+
+            // Lehrkräfte und Admins: Vorname ODER Nachname genügt — das andere Feld bleibt optional.
+            var namesOptional = roleSelect.value === 'teacher' || roleSelect.value === 'admin';
+            nameFields.forEach(function (field) { field.required = !namesOptional; });
+            nameLabels.forEach(function (label) {
+                label.textContent = label.textContent.replace(/\s*\*$/, '') + (namesOptional ? '' : ' *');
+            });
+            if (nameHint) { nameHint.hidden = !namesOptional; }
         }
 
         if (roleSelect) {

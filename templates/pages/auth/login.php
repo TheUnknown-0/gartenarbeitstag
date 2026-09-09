@@ -1,4 +1,4 @@
-<?php /** Login. Erwartet optional: $redirect. */ ?>
+<?php /** Login. Erwartet optional: $redirect. $codeLoginAvailable (bool). */ ?>
 <h1 style="font-size:1.35rem;">Anmelden</h1>
 <p class="text-soft text-sm">Melde dich mit deinem Schul-Konto an.</p>
 
@@ -22,3 +22,11 @@
 
     <button class="btn btn-primary btn-block btn-lg" type="submit">Anmelden</button>
 </form>
+
+<?php if ($codeLoginAvailable): ?>
+    <p class="text-center text-sm mt-2">
+        <a href="<?= e($ctx->url('/login-code') . (!empty($redirect) ? '?redirect=' . rawurlencode($redirect) : '')) ?>">
+            Anmeldung per Code (auch bei vergessenem Passwort)
+        </a>
+    </p>
+<?php endif; ?>

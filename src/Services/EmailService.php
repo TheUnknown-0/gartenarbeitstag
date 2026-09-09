@@ -30,6 +30,28 @@ final class EmailService
         return $this->mailer->isConfigured();
     }
 
+    /** @param array<string, mixed> $user Erwartet id, email, firstname, lastname. */
+    public function sendLoginCode(array $user, string $code): bool
+    {
+        $name = trim((string) $user['firstname'] . ' ' . (string) $user['lastname']);
+        $subject = 'Dein Anmeldecode';
+        $text = "Hallo,\n\ndein Anmeldecode lautet: {$code}\n\n"
+            . "Er ist 10 Minuten gültig und nur einmal verwendbar. "
+            . "Falls du diese Anmeldung nicht angefordert hast, kannst du diese Mail ignorieren.";
+        $html = $this->view->renderPartial('emails/login-code', ['name' => $name, 'code' => $code]);
+
+        try {
+            $this->mailer->send((string) $user['email'], $name, $subject, $text, $html);
+            $this->log(null, (int) $user['id'], (string) $user['email'], $subject, 'login_code', 'sent', null);
+
+            return true;
+        } catch (\RuntimeException $e) {
+            $this->log(null, (int) $user['id'], (string) $user['email'], $subject, 'login_code', 'failed', mb_substr($e->getMessage(), 0, 500));
+
+            return false;
+        }
+    }
+
     /** @return array{success: bool, error: ?string} */
     public function sendTest(string $toEmail): array
     {

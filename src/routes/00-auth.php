@@ -23,6 +23,11 @@ return static function (Router $r): void {
     $r->post('/login', [AuthController::class, 'login']);
     $r->post('/logout', [AuthController::class, 'logout']);
 
+    $r->get('/login-code', [AuthController::class, 'showCodeRequest']);
+    $r->post('/login-code', [AuthController::class, 'requestCode']);
+    $r->get('/login-code/bestaetigen', [AuthController::class, 'showCodeVerify']);
+    $r->post('/login-code/bestaetigen', [AuthController::class, 'verifyCode']);
+
     $r->get('/zugang', [AuthController::class, 'showSitePassword']);
     $r->post('/zugang', [AuthController::class, 'sitePassword']);
 

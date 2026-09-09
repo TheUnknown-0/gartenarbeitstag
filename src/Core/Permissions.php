@@ -62,6 +62,10 @@ final class Permissions
     public const BERECHTIGUNGEN_VERGEBEN = 'berechtigungen_vergeben';
     public const BERECHTIGUNGSGRUPPEN_VERWALTEN = 'berechtigungsgruppen_verwalten';
 
+    // E-Mail
+    public const EMAILS_SEHEN = 'emails_sehen';
+    public const EMAILS_VERSENDEN = 'emails_versenden';
+
     // Einstellungen & Sonstiges
     public const EINSTELLUNGEN_SEHEN = 'einstellungen_sehen';
     public const EINSTELLUNGEN_BEARBEITEN = 'einstellungen_bearbeiten';
@@ -119,6 +123,10 @@ final class Permissions
                 self::BERECHTIGUNGEN_SEHEN => 'Berechtigungen sehen',
                 self::BERECHTIGUNGEN_VERGEBEN => 'Berechtigungen vergeben',
                 self::BERECHTIGUNGSGRUPPEN_VERWALTEN => 'Berechtigungsgruppen verwalten',
+            ],
+            'E-Mail' => [
+                self::EMAILS_SEHEN => 'E-Mail-Versand & Protokoll sehen',
+                self::EMAILS_VERSENDEN => 'Erinnerungs- & Test-Mails versenden',
             ],
             'Einstellungen & Sonstiges' => [
                 self::EINSTELLUNGEN_SEHEN => 'Einstellungen sehen',
@@ -185,6 +193,8 @@ final class Permissions
             self::BERECHTIGUNGEN_SEHEN => [self::BENUTZER_SEHEN],
             self::BERECHTIGUNGEN_VERGEBEN => [self::BERECHTIGUNGEN_SEHEN],
             self::BERECHTIGUNGSGRUPPEN_VERWALTEN => [self::BERECHTIGUNGEN_SEHEN],
+
+            self::EMAILS_VERSENDEN => [self::EMAILS_SEHEN],
 
             self::EINSTELLUNGEN_BEARBEITEN => [self::EINSTELLUNGEN_SEHEN],
         ];

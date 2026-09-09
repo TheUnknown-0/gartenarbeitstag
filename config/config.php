@@ -24,6 +24,16 @@ return [
         'user' => $env('DB_USER', 'gartenarbeitstag'),
         'pass' => $env('DB_PASS', ''),
     ],
+    'mail' => [
+        'host' => $env('MAIL_HOST', ''),
+        'port' => (int) $env('MAIL_PORT', '587'),
+        // 'tls' (STARTTLS, meist Port 587), 'ssl' (implizites TLS, meist Port 465) oder 'none'.
+        'encryption' => $env('MAIL_ENCRYPTION', 'tls'),
+        'username' => $env('MAIL_USER', ''),
+        'password' => $env('MAIL_PASS', ''),
+        'from_address' => $env('MAIL_FROM_ADDRESS', ''),
+        'from_name' => $env('MAIL_FROM_NAME', 'Gartenarbeitstag'),
+    ],
     'uploads' => [
         'dir' => dirname(__DIR__) . '/uploads',
         'max_logo_bytes' => 2 * 1024 * 1024,

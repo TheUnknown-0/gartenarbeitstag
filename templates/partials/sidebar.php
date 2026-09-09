@@ -86,6 +86,7 @@ $navLayout = (new Customization($ctx->settings))->navLayout();
                     'benutzer' => [$u('/admin/benutzer'), '👥', 'Benutzer', $can(P::BENUTZER_SEHEN)],
                     'berechtigungen' => [$u('/admin/berechtigungen'), '🔑', 'Berechtigungen', $can(P::BERECHTIGUNGEN_SEHEN)],
                     'druck' => [$u('/admin/druck'), '🖨️', 'Listen & Export', $can(P::BERICHTE_SEHEN)],
+                    'emails' => [$u('/admin/emails'), '📧', 'E-Mail', $can(P::EMAILS_SEHEN)],
                     'einstellungen' => [$u('/admin/einstellungen'), '⚙️', 'Einstellungen', $can(P::EINSTELLUNGEN_SEHEN)],
                     'darstellung' => [$u('/admin/darstellung'), '🎨', 'Darstellung', $auth->isAdmin()],
                     'audit-log' => [$u('/admin/audit-log'), '📜', 'Audit-Log', $can(P::AUDIT_LOGS_SEHEN)],

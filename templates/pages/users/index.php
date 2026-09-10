@@ -201,9 +201,14 @@ $roleBadge = static fn (string $role): string => match ($role) {
                                         data-reset-name="<?= e($fullName !== '' ? $fullName : (string) $row['username']) ?>">🔑 Passwort</button>
                             <?php endif; ?>
                             <?php if ($canDelete && !$isSelf): ?>
+                                <?php
+                                $deleteConfirm = $role === 'student' && (int) $row['is_active'] === 1
+                                    ? 'Benutzer „' . $row['username'] . '“ wirklich löschen? Schüler:innen mit Einschreibungen werden stattdessen deaktiviert.'
+                                    : 'Benutzer „' . $row['username'] . '“ endgültig löschen? Vorhandene Einschreibungen werden mitgelöscht.';
+                                ?>
                                 <form method="post"
                                       action="<?= e($ctx->url('/admin/benutzer/' . $id . '/loeschen')) ?>"
-                                      data-confirm="Benutzer „<?= e($row['username']) ?>“ wirklich löschen? Schüler:innen mit Einschreibungen werden stattdessen deaktiviert.">
+                                      data-confirm="<?= e($deleteConfirm) ?>">
                                     <?= $csrf->field() ?>
                                     <button class="btn btn-sm btn-danger-ghost" type="submit">Löschen</button>
                                 </form>

@@ -573,8 +573,12 @@ final class UsersController extends Controller
             $this->redirect($list);
         }
 
+        // Aktive Schüler:innen mit Einschreibungen werden nur deaktiviert, damit
+        // ihre Einschreibungen nicht versehentlich mitgelöscht werden. Ist das
+        // Konto bereits inaktiv, war das eine bewusste Entscheidung — dann wird
+        // es (samt Einschreibungen per ON DELETE CASCADE) endgültig entfernt.
         $enrollments = (int) $this->ctx->db->fetchValue('SELECT COUNT(*) FROM enrollments WHERE user_id = ?', [$userId]);
-        if ((string) $user['role'] === 'student' && $enrollments > 0) {
+        if ((string) $user['role'] === 'student' && $enrollments > 0 && (int) $user['is_active'] === 1) {
             $this->ctx->db->run('UPDATE users SET is_active = 0 WHERE id = ?', [$userId]);
             $this->ctx->audit->log(
                 'benutzer.deaktivieren',
@@ -583,7 +587,7 @@ final class UsersController extends Controller
             );
             $this->flash(
                 'warning',
-                sprintf('„%s“ hat %d Einschreibung(en) und wurde deshalb nur deaktiviert. Die Einschreibungen bleiben erhalten.', (string) $user['username'], $enrollments),
+                sprintf('„%s“ hat %d Einschreibung(en) und wurde deshalb nur deaktiviert. Erneutes Löschen entfernt das Konto samt Einschreibungen endgültig.', (string) $user['username'], $enrollments),
             );
             $this->redirect($list);
         }
@@ -594,7 +598,15 @@ final class UsersController extends Controller
         $this->ctx->audit->log(
             'benutzer.loeschen',
             'warning',
-            sprintf('Benutzer #%d "%s" (%s %s, Rolle: %s) gelöscht', $userId, (string) $user['username'], (string) $user['firstname'], (string) $user['lastname'], (string) $user['role']),
+            sprintf(
+                'Benutzer #%d "%s" (%s %s, Rolle: %s) gelöscht%s',
+                $userId,
+                (string) $user['username'],
+                (string) $user['firstname'],
+                (string) $user['lastname'],
+                (string) $user['role'],
+                $enrollments > 0 ? sprintf(' — inkl. %d Einschreibung(en)', $enrollments) : '',
+            ),
         );
         $this->flash('success', 'Der Benutzer wurde gelöscht.');
         $this->redirect($list);

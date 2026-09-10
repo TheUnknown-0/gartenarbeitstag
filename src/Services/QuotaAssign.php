@@ -19,6 +19,9 @@ use RuntimeException;
  * Anders als im Referenz-Tool (ein Platz pro Schüler:in für den ganzen Tag)
  * läuft die Verteilung hier je Zeitblock unabhängig, weil dieses Projekt
  * Rotation über mehrere Zeitblöcke kennt — genau wie Direkt-/Wunschmodus.
+ * `garden_days.max_blocks_per_student` begrenzt dabei, in wie vielen Blöcken
+ * eine Person insgesamt landen darf (bereits bestehende manuelle Plätze
+ * eingerechnet); ist die Grenze erreicht, fällt sie aus dem Kandidatenpool.
  *
  * manual_only-Stände und Ausschlusskriterien gelten unverändert: erstere
  * werden nie automatisch befüllt, letztere schließen einzelne Schüler:innen
@@ -119,6 +122,12 @@ final class QuotaAssign
         $priority = $this->slotPriority($dayId);
         $excluded = $this->excludedStudentsByStation($dayId);
 
+        // Höchstzahl Zeitblöcke je Schüler:in am Aktionstag (NULL = unbegrenzt).
+        // $blockCountByUser zählt bereits fest zugeteilte Blöcke (manuell, früherer
+        // Lauf …) und wächst mit jeder Platzierung dieses Laufs weiter.
+        $maxBlocks = $day['max_blocks_per_student'] !== null ? (int) $day['max_blocks_per_student'] : null;
+        $blockCountByUser = $this->assignedBlockCountByUser($dayId);
+
         $basePools = $this->studentPoolsByGradeClass($grades);
 
         $assignedTotal = 0;
@@ -144,11 +153,18 @@ final class QuotaAssign
             $alreadySet = array_flip($already);
 
             // Frischer Pool je Block: wer in diesem Block schon fest eingeschrieben ist
-            // (manuell, per Quote aus einem früheren Lauf o.ä.), zählt nicht mehr mit.
+            // (manuell, per Quote aus einem früheren Lauf o.ä.) oder die erlaubte
+            // Höchstzahl Zeitblöcke am Tag bereits erreicht hat, zählt nicht mehr mit.
             $pools = [];
             foreach ($basePools as $grade => $byClass) {
                 foreach ($byClass as $class => $ids) {
-                    $pools[$grade][$class] = array_values(array_filter($ids, static fn (int $id): bool => !isset($alreadySet[$id])));
+                    $pools[$grade][$class] = array_values(array_filter($ids, static function (int $id) use ($alreadySet, $blockCountByUser, $maxBlocks): bool {
+                        if (isset($alreadySet[$id])) {
+                            return false;
+                        }
+
+                        return $maxBlocks === null || ($blockCountByUser[$id] ?? 0) < $maxBlocks;
+                    }));
                 }
             }
 
@@ -183,6 +199,9 @@ final class QuotaAssign
 
                     foreach ($picked as $studentId) {
                         $this->place($db, $dayId, $studentId, $stationId, $blockId);
+                        // Der Pool dieses Blocks schließt bereits belegte Schüler:innen
+                        // aus — jede Platzierung ist also ein zusätzlicher Zeitblock.
+                        $blockCountByUser[$studentId] = ($blockCountByUser[$studentId] ?? 0) + 1;
                     }
                     $assignedTotal += count($picked);
                     $blockAssigned += count($picked);
@@ -286,6 +305,26 @@ final class QuotaAssign
             [$dayId],
         ) as $row) {
             $result[(int) $row['station_id']][(int) $row['user_id']] = true;
+        }
+
+        return $result;
+    }
+
+    /**
+     * Wie viele verschiedene Zeitblöcke sind einer Person an diesem Aktionstag
+     * bereits fest zugeteilt? Grundlage für die Höchstzahl-Zeitblöcke-Grenze.
+     *
+     * @return array<int, int> userId => Anzahl Zeitblöcke
+     */
+    private function assignedBlockCountByUser(int $dayId): array
+    {
+        $result = [];
+        foreach ($this->db->fetchAll(
+            "SELECT user_id, COUNT(DISTINCT time_block_id) AS n FROM enrollments
+             WHERE garden_day_id = ? AND status = 'assigned' GROUP BY user_id",
+            [$dayId],
+        ) as $row) {
+            $result[(int) $row['user_id']] = (int) $row['n'];
         }
 
         return $result;

@@ -3,7 +3,8 @@
  * Quotenmodus: Bedarf je Stand/Zeitblock/Stufe, optionale Klassen-Präferenz
  * und Prioritätsklasse, Zuteilung erzeugen/zurücksetzen.
  * Erwartet: $day, $stations, $blocks, $grades, $classes, $demand, $preference,
- * $priority, $studentCounts, $assignedCount, $report, $canEdit, $canRun,
+ * $priority, $studentCounts, $assignedCount, $availability (blockId => grade =>
+ * einteilbare Schüler:innen), $maxBlocks, $report, $canEdit, $canRun,
  * $canReset, $base.
  */
 use App\Services\DayQueries;
@@ -86,10 +87,19 @@ $blocksLayout = page_blocks('admin-quote', [
                 Wie viele Schüler:innen je Klassenstufe sollen in diesem Zeitblock an diesem Stand mitmachen?
                 0 oder leer = kein Bedarf.
             </p>
+            <p class="text-soft text-sm">
+                Die Zähler unter jeder Tabelle rechnen live gegen: <em>Summe Bedarf / einteilbare Schüler:innen</em>
+                der Stufe in diesem Zeitblock — gezählt werden aktive Schüler:innen mit Klasse/Stufe, die dort noch
+                nicht fest eingeteilt sind
+                <?php if ($maxBlocks !== null): ?>
+                    und die erlaubten <?= (int) $maxBlocks ?> Zeitblöcke je Schüler:in noch nicht ausgeschöpft haben<?php endif; ?>.
+                Rot = Bedarf übersteigt das Angebot.
+            </p>
             <?php if ($canEdit && $stations !== [] && $blocks !== []): ?>
                 <form method="post" action="<?= e($base . '/bedarf') ?>">
                     <?= $csrf->field() ?>
                     <?php foreach ($blocks as $block): ?>
+                        <?php $bid = (int) $block['id']; ?>
                         <h3 class="mt-2"><?= e(DayQueries::blockLabel($block)) ?></h3>
                         <div class="table-wrap">
                             <table class="data-table">
@@ -101,12 +111,13 @@ $blocksLayout = page_blocks('admin-quote', [
                                 </thead>
                                 <tbody>
                                     <?php foreach ($stations as $station): ?>
-                                        <?php $sid = (int) $station['id']; $bid = (int) $block['id']; ?>
+                                        <?php $sid = (int) $station['id']; ?>
                                         <tr>
                                             <td><?= e($station['name']) ?></td>
                                             <?php foreach ($grades as $grade): ?>
                                                 <td>
                                                     <input class="input" type="number" min="0" max="999" style="width:70px;"
+                                                           data-quota-input data-block="<?= $bid ?>" data-grade="<?= $grade ?>"
                                                            name="demand[<?= $sid ?>][<?= $bid ?>][<?= $grade ?>]"
                                                            value="<?= e((string) ($demand[$sid][$bid][$grade] ?? 0)) ?>">
                                                 </td>
@@ -115,6 +126,14 @@ $blocksLayout = page_blocks('admin-quote', [
                                     <?php endforeach; ?>
                                 </tbody>
                             </table>
+                        </div>
+                        <?php $blockAvail = 0; ?>
+                        <div class="chip-row mb-2" data-quota-balance="<?= $bid ?>" style="margin-top:8px;">
+                            <?php foreach ($grades as $grade): ?>
+                                <?php $av = (int) ($availability[$bid][$grade] ?? 0); $blockAvail += $av; ?>
+                                <span class="badge" data-quota-grade="<?= $grade ?>" data-available="<?= $av ?>"><span>Stufe <?= e((string) $grade) ?>: <span data-quota-sum>0</span>&#8239;/&#8239;<?= $av ?></span></span>
+                            <?php endforeach; ?>
+                            <span class="badge" data-quota-total data-available="<?= $blockAvail ?>"><span>Block gesamt: <span data-quota-sum>0</span>&#8239;/&#8239;<?= $blockAvail ?></span></span>
                         </div>
                     <?php endforeach; ?>
                     <button class="btn btn-primary mt-2" type="submit">Bedarf speichern</button>

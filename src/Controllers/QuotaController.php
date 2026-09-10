@@ -265,6 +265,40 @@ final class QuotaController extends Controller
             [$dayId],
         );
 
+        // Verfügbarkeit je Zeitblock + Stufe für die Live-Gegenrechnung im
+        // Bedarf-Formular: aktive Schüler:innen der Stufe, abzüglich derer, die in
+        // diesem Block schon fest eingeschrieben sind oder die erlaubte Höchstzahl
+        // Zeitblöcke am Aktionstag bereits erreicht haben. Spiegelt die Pool-Logik
+        // von QuotaAssign::execute wider (Snapshot beim Seitenaufruf).
+        $maxBlocks = $day['max_blocks_per_student'] !== null ? (int) $day['max_blocks_per_student'] : null;
+        $students = $db->fetchAll(
+            "SELECT id, grade FROM users
+             WHERE role = 'student' AND is_active = 1 AND grade IS NOT NULL AND class IS NOT NULL AND class <> ''",
+        );
+        $assignedBlocksByUser = [];
+        foreach ($db->fetchAll(
+            "SELECT user_id, time_block_id FROM enrollments WHERE garden_day_id = ? AND status = 'assigned'",
+            [$dayId],
+        ) as $row) {
+            $assignedBlocksByUser[(int) $row['user_id']][(int) $row['time_block_id']] = true;
+        }
+
+        $availability = [];
+        foreach ($blocks as $block) {
+            $bid = (int) $block['id'];
+            foreach ($students as $student) {
+                $userBlocks = $assignedBlocksByUser[(int) $student['id']] ?? [];
+                if (isset($userBlocks[$bid])) {
+                    continue;
+                }
+                if ($maxBlocks !== null && count($userBlocks) >= $maxBlocks) {
+                    continue;
+                }
+                $grade = (int) $student['grade'];
+                $availability[$bid][$grade] = ($availability[$bid][$grade] ?? 0) + 1;
+            }
+        }
+
         return $this->render('pages/quota/index', [
             'title' => 'Quote',
             'day' => $day,
@@ -277,11 +311,14 @@ final class QuotaController extends Controller
             'priority' => $priority,
             'studentCounts' => $studentCounts,
             'assignedCount' => $assignedCount,
+            'availability' => $availability,
+            'maxBlocks' => $maxBlocks,
             'report' => $report,
             'canEdit' => $this->ctx->auth->can(P::EINSCHREIBUNGEN_BEARBEITEN),
             'canRun' => $this->ctx->auth->can(P::ZUTEILUNG_AUSFUEHREN),
             'canReset' => $this->ctx->auth->can(P::ZUTEILUNG_ZURUECKSETZEN),
             'base' => $this->ctx->url('/admin/quote'),
+            'pageScripts' => ['quota.js'],
         ]);
     }
 

@@ -633,6 +633,10 @@ final class UsersController extends Controller
             'maxRows' => self::MAX_IMPORT_ROWS,
             'canAssignCriteria' => $this->ctx->auth->can(P::KRITERIEN_ZUWEISEN),
             'roleLabels' => self::ROLE_LABELS,
+            'canPurgeImported' => $this->ctx->auth->isAdmin(),
+            'importedStudentCount' => (int) $this->ctx->db->fetchValue(
+                "SELECT COUNT(*) FROM users WHERE role = 'student' AND created_via = 'import'",
+            ),
         ]);
     }
 
@@ -753,8 +757,8 @@ final class UsersController extends Controller
                 $password = $row['password'] ?? self::generatePassword();
                 $this->ctx->db->transaction(function () use ($row, $role, $password, $canAssign, $actorId): void {
                     $this->ctx->db->run(
-                        'INSERT INTO users (username, email, password, firstname, lastname, class, grade, role, is_active, must_change_password)
-                         VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1, 1)',
+                        "INSERT INTO users (username, email, password, firstname, lastname, class, grade, role, is_active, must_change_password, created_via)
+                         VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1, 1, 'import')",
                         [
                             $row['username'],
                             $row['email'],
@@ -808,6 +812,49 @@ final class UsersController extends Controller
         } else {
             $this->flash('warning', 'Es wurde kein Konto übernommen.');
         }
+        $this->redirect($back);
+    }
+
+    /**
+     * POST /admin/benutzer/import/schueler-loeschen
+     *
+     * Löscht ALLE per CSV importierten Schüler:innen vollständig — unabhängig
+     * von Aktiv-Status und bestehenden Einschreibungen (die per ON DELETE
+     * CASCADE mitgehen). Nur für Administratoren.
+     */
+    public function deleteImportedStudents(array $params): never
+    {
+        $this->requireAdmin();
+        $this->requireCsrf();
+        $back = $this->ctx->url('/admin/benutzer/import');
+        $db = $this->ctx->db;
+
+        if ((int) ($_POST['confirm'] ?? 0) !== 1) {
+            $this->flash('error', 'Bitte das Löschen ausdrücklich bestätigen.');
+            $this->redirect($back);
+        }
+
+        $count = (int) $db->fetchValue("SELECT COUNT(*) FROM users WHERE role = 'student' AND created_via = 'import'");
+        if ($count === 0) {
+            $this->flash('info', 'Es gibt keine per CSV importierten Schüler:innen zum Löschen.');
+            $this->redirect($back);
+        }
+
+        $enrollments = (int) $db->fetchValue(
+            "SELECT COUNT(*) FROM enrollments e JOIN users u ON u.id = e.user_id
+             WHERE u.role = 'student' AND u.created_via = 'import'",
+        );
+
+        // Abhängige Datensätze (Einschreibungen, Anwesenheit, Ausschlüsse …)
+        // hängen per FK ON DELETE CASCADE / SET NULL am Benutzer.
+        $db->run("DELETE FROM users WHERE role = 'student' AND created_via = 'import'");
+
+        $this->ctx->audit->log(
+            'benutzer.import_loeschen',
+            'critical',
+            sprintf('%d per CSV importierte Schüler:innen vollständig gelöscht (inkl. %d Einschreibung(en)).', $count, $enrollments),
+        );
+        $this->flash('success', sprintf('%d per CSV importierte Schüler:innen wurden gelöscht.', $count));
         $this->redirect($back);
     }
 

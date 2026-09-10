@@ -15,6 +15,7 @@ return static function (Router $r): void {
     $r->post('/admin/benutzer/import', [UsersController::class, 'importPreview']);
     $r->post('/admin/benutzer/import/ausfuehren', [UsersController::class, 'importRun']);
     $r->post('/admin/benutzer/import/abbrechen', [UsersController::class, 'importCancel']);
+    $r->post('/admin/benutzer/import/schueler-loeschen', [UsersController::class, 'deleteImportedStudents']);
     $r->get('/admin/benutzer/zugangsdaten-pdf', [UsersController::class, 'importCredentials']);
     $r->post('/admin/benutzer/klasse-passwoerter', [UsersController::class, 'classPasswords']);
 

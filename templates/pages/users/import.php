@@ -5,7 +5,8 @@
  *  2) Vorschau nach dem Hochladen ($preview: rows, stats, delimiter)
  *  3) Ergebnis des letzten Laufs ($result: created, updated, errors, createdNames, credentials)
  * Erwartet außerdem: $columns (CSV_COLUMNS), $maxBytes, $maxRows, $canAssignCriteria,
- * $roleLabels, $credentialsAvailable.
+ * $roleLabels, $credentialsAvailable, optional $canPurgeImported (Admin) und
+ * $importedStudentCount.
  *
  * Die Zeilen aus der Vorschau werden serverseitig in der Session gehalten —
  * „Ausführen“ und „Abbrechen“ übertragen daher keine Formulardaten, nur CSRF.
@@ -140,6 +141,37 @@ $statusBadge = static fn (string $status): string => match ($status) {
             </div>
         </div>
     </div>
+
+    <?php if (!empty($canPurgeImported)): ?>
+        <?php $importedCount = (int) ($importedStudentCount ?? 0); ?>
+        <section class="card mt-2">
+            <div class="card-header"><h3>🗑️ Importierte Schüler:innen löschen</h3></div>
+            <div class="card-body">
+                <p class="text-soft">
+                    Entfernt <strong>alle</strong> per CSV angelegten Schüler:innen vollständig — samt ihren
+                    Einschreibungen und Anwesenheiten. Manuell angelegte Konten und andere Rollen bleiben
+                    unberührt. Das lässt sich nicht rückgängig machen.
+                </p>
+                <p class="text-sm text-soft">
+                    Aktuell <strong><?= e((string) $importedCount) ?></strong>
+                    per CSV importierte<?= $importedCount === 1 ? 'r' : '' ?> Schüler:in<?= $importedCount === 1 ? '' : 'nen' ?>.
+                </p>
+                <?php if ($importedCount > 0): ?>
+                    <form method="post" action="<?= e($ctx->url('/admin/benutzer/import/schueler-loeschen')) ?>"
+                          data-confirm="Wirklich alle <?= e((string) $importedCount) ?> per CSV importierten Schüler:innen samt Einschreibungen löschen?">
+                        <?= $csrf->field() ?>
+                        <label class="checkbox-row">
+                            <input type="checkbox" name="confirm" value="1" required>
+                            <span>Ja, alle per CSV importierten Schüler:innen endgültig löschen.</span>
+                        </label>
+                        <div class="mt-2">
+                            <button class="btn btn-danger" type="submit"><?= e((string) $importedCount) ?> Schüler:innen löschen</button>
+                        </div>
+                    </form>
+                <?php endif; ?>
+            </div>
+        </section>
+    <?php endif; ?>
 <?php else: ?>
     <?php $stats = $preview['stats']; ?>
     <div class="card card-pad mb-2">

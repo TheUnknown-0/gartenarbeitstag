@@ -19,9 +19,10 @@ use RuntimeException;
  * Anders als im Referenz-Tool (ein Platz pro Schüler:in für den ganzen Tag)
  * läuft die Verteilung hier je Zeitblock unabhängig, weil dieses Projekt
  * Rotation über mehrere Zeitblöcke kennt — genau wie Direkt-/Wunschmodus.
- * `garden_days.max_blocks_per_student` begrenzt dabei, in wie vielen Blöcken
- * eine Person insgesamt landen darf (bereits bestehende manuelle Plätze
- * eingerechnet); ist die Grenze erreicht, fällt sie aus dem Kandidatenpool.
+ * Zwei Grenzen halten den Kandidatenpool je Block klein: `max_blocks_per_student`
+ * begrenzt, in wie vielen Blöcken eine Person insgesamt landen darf (bestehende
+ * manuelle Plätze eingerechnet), und wer in einem zeitlich überlappenden Block
+ * schon fest eingeteilt ist, fällt für diesen Block ebenfalls raus.
  *
  * manual_only-Stände und Ausschlusskriterien gelten unverändert: erstere
  * werden nie automatisch befüllt, letztere schließen einzelne Schüler:innen
@@ -123,10 +124,31 @@ final class QuotaAssign
         $excluded = $this->excludedStudentsByStation($dayId);
 
         // Höchstzahl Zeitblöcke je Schüler:in am Aktionstag (NULL = unbegrenzt).
-        // $blockCountByUser zählt bereits fest zugeteilte Blöcke (manuell, früherer
-        // Lauf …) und wächst mit jeder Platzierung dieses Laufs weiter.
         $maxBlocks = $day['max_blocks_per_student'] !== null ? (int) $day['max_blocks_per_student'] : null;
-        $blockCountByUser = $this->assignedBlockCountByUser($dayId);
+
+        // blockId => Set der sich zeitlich überschneidenden Block-IDs (inkl. sich
+        // selbst). Wer in einem davon fest eingeteilt ist, kann hier nicht mehr
+        // hin.
+        $overlapSet = [];
+        foreach ($blocks as $a) {
+            foreach ($blocks as $b) {
+                if ((int) $a['id'] === (int) $b['id']
+                    || ($a['start_time'] < $b['end_time'] && $b['start_time'] < $a['end_time'])) {
+                    $overlapSet[(int) $a['id']][(int) $b['id']] = true;
+                }
+            }
+        }
+
+        // userId => Set bereits fest zugeteilter Block-IDs (manuell, früherer Lauf,
+        // …). Wächst mit jeder Platzierung dieses Laufs weiter und speist sowohl
+        // die Überschneidungs- als auch die Höchstzahl-Prüfung.
+        $assignedBlocksByUser = [];
+        foreach ($db->fetchAll(
+            "SELECT user_id, time_block_id FROM enrollments WHERE garden_day_id = ? AND status = 'assigned'",
+            [$dayId],
+        ) as $row) {
+            $assignedBlocksByUser[(int) $row['user_id']][(int) $row['time_block_id']] = true;
+        }
 
         $basePools = $this->studentPoolsByGradeClass($grades);
 
@@ -146,24 +168,27 @@ final class QuotaAssign
                 continue;
             }
 
-            $already = array_map('intval', array_column(
-                $db->fetchAll("SELECT user_id FROM enrollments WHERE garden_day_id = ? AND time_block_id = ? AND status = 'assigned'", [$dayId, $blockId]),
-                'user_id',
-            ));
-            $alreadySet = array_flip($already);
+            $blockOverlap = $overlapSet[$blockId] ?? [$blockId => true];
 
-            // Frischer Pool je Block: wer in diesem Block schon fest eingeschrieben ist
-            // (manuell, per Quote aus einem früheren Lauf o.ä.) oder die erlaubte
-            // Höchstzahl Zeitblöcke am Tag bereits erreicht hat, zählt nicht mehr mit.
+            // Frischer Pool je Block: wer in diesem oder einem zeitgleichen Block
+            // schon fest eingeschrieben ist (manuell, früherer Lauf o.ä.) oder die
+            // erlaubte Höchstzahl Zeitblöcke am Tag bereits erreicht hat, zählt
+            // nicht mehr mit.
             $pools = [];
             foreach ($basePools as $grade => $byClass) {
                 foreach ($byClass as $class => $ids) {
-                    $pools[$grade][$class] = array_values(array_filter($ids, static function (int $id) use ($alreadySet, $blockCountByUser, $maxBlocks): bool {
-                        if (isset($alreadySet[$id])) {
+                    $pools[$grade][$class] = array_values(array_filter($ids, static function (int $id) use ($assignedBlocksByUser, $blockOverlap, $maxBlocks): bool {
+                        $userBlocks = $assignedBlocksByUser[$id] ?? [];
+                        if ($maxBlocks !== null && count($userBlocks) >= $maxBlocks) {
                             return false;
                         }
+                        foreach ($userBlocks as $bid => $_true) {
+                            if (isset($blockOverlap[$bid])) {
+                                return false;
+                            }
+                        }
 
-                        return $maxBlocks === null || ($blockCountByUser[$id] ?? 0) < $maxBlocks;
+                        return true;
                     }));
                 }
             }
@@ -200,8 +225,8 @@ final class QuotaAssign
                     foreach ($picked as $studentId) {
                         $this->place($db, $dayId, $studentId, $stationId, $blockId);
                         // Der Pool dieses Blocks schließt bereits belegte Schüler:innen
-                        // aus — jede Platzierung ist also ein zusätzlicher Zeitblock.
-                        $blockCountByUser[$studentId] = ($blockCountByUser[$studentId] ?? 0) + 1;
+                        // aus — jede Platzierung belegt also einen weiteren Zeitblock.
+                        $assignedBlocksByUser[$studentId][$blockId] = true;
                     }
                     $assignedTotal += count($picked);
                     $blockAssigned += count($picked);
@@ -305,26 +330,6 @@ final class QuotaAssign
             [$dayId],
         ) as $row) {
             $result[(int) $row['station_id']][(int) $row['user_id']] = true;
-        }
-
-        return $result;
-    }
-
-    /**
-     * Wie viele verschiedene Zeitblöcke sind einer Person an diesem Aktionstag
-     * bereits fest zugeteilt? Grundlage für die Höchstzahl-Zeitblöcke-Grenze.
-     *
-     * @return array<int, int> userId => Anzahl Zeitblöcke
-     */
-    private function assignedBlockCountByUser(int $dayId): array
-    {
-        $result = [];
-        foreach ($this->db->fetchAll(
-            "SELECT user_id, COUNT(DISTINCT time_block_id) AS n FROM enrollments
-             WHERE garden_day_id = ? AND status = 'assigned' GROUP BY user_id",
-            [$dayId],
-        ) as $row) {
-            $result[(int) $row['user_id']] = (int) $row['n'];
         }
 
         return $result;

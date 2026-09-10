@@ -266,11 +266,26 @@ final class QuotaController extends Controller
         );
 
         // Verfügbarkeit je Zeitblock + Stufe für die Live-Gegenrechnung im
-        // Bedarf-Formular: aktive Schüler:innen der Stufe, abzüglich derer, die in
-        // diesem Block schon fest eingeschrieben sind oder die erlaubte Höchstzahl
-        // Zeitblöcke am Aktionstag bereits erreicht haben. Spiegelt die Pool-Logik
-        // von QuotaAssign::execute wider (Snapshot beim Seitenaufruf).
+        // Bedarf-Formular. Spiegelt die Pool-Logik von QuotaAssign::execute wider
+        // (Snapshot beim Seitenaufruf): aktive Schüler:innen der Stufe, abzüglich
+        // derer, die schon fest eingeteilt sind in diesem Block, in einem zeitlich
+        // überlappenden Block oder die die erlaubte Höchstzahl Zeitblöcke am
+        // Aktionstag erreicht haben. Den Bedarf aus anderen Blöcken rechnet das
+        // JavaScript live obendrauf (siehe blockOverlaps/maxBlocks).
         $maxBlocks = $day['max_blocks_per_student'] !== null ? (int) $day['max_blocks_per_student'] : null;
+
+        // Zeitliche Überschneidungen: blockId => Liste der Blöcke, die sich damit
+        // überschneiden (inkl. sich selbst).
+        $blockOverlaps = [];
+        foreach ($blocks as $a) {
+            foreach ($blocks as $b) {
+                if ((int) $a['id'] === (int) $b['id']
+                    || ($a['start_time'] < $b['end_time'] && $b['start_time'] < $a['end_time'])) {
+                    $blockOverlaps[(int) $a['id']][] = (int) $b['id'];
+                }
+            }
+        }
+
         $students = $db->fetchAll(
             "SELECT id, grade FROM users
              WHERE role = 'student' AND is_active = 1 AND grade IS NOT NULL AND class IS NOT NULL AND class <> ''",
@@ -286,12 +301,20 @@ final class QuotaController extends Controller
         $availability = [];
         foreach ($blocks as $block) {
             $bid = (int) $block['id'];
+            $overlapIds = $blockOverlaps[$bid] ?? [$bid];
             foreach ($students as $student) {
                 $userBlocks = $assignedBlocksByUser[(int) $student['id']] ?? [];
-                if (isset($userBlocks[$bid])) {
+                if ($maxBlocks !== null && count($userBlocks) >= $maxBlocks) {
                     continue;
                 }
-                if ($maxBlocks !== null && count($userBlocks) >= $maxBlocks) {
+                $busy = false;
+                foreach ($overlapIds as $ob) {
+                    if (isset($userBlocks[$ob])) {
+                        $busy = true;
+                        break;
+                    }
+                }
+                if ($busy) {
                     continue;
                 }
                 $grade = (int) $student['grade'];
@@ -312,6 +335,7 @@ final class QuotaController extends Controller
             'studentCounts' => $studentCounts,
             'assignedCount' => $assignedCount,
             'availability' => $availability,
+            'blockOverlaps' => $blockOverlaps,
             'maxBlocks' => $maxBlocks,
             'report' => $report,
             'canEdit' => $this->ctx->auth->can(P::EINSCHREIBUNGEN_BEARBEITEN),

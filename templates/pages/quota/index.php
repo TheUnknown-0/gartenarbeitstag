@@ -4,8 +4,9 @@
  * und Prioritätsklasse, Zuteilung erzeugen/zurücksetzen.
  * Erwartet: $day, $stations, $blocks, $grades, $classes, $demand, $preference,
  * $priority, $studentCounts, $assignedCount, $availability (blockId => grade =>
- * einteilbare Schüler:innen), $maxBlocks, $report, $canEdit, $canRun,
- * $canReset, $base.
+ * einteilbare Schüler:innen), $blockOverlaps (blockId => Liste sich zeitlich
+ * überschneidender Block-IDs, inkl. sich selbst), $maxBlocks, $report,
+ * $canEdit, $canRun, $canReset, $base.
  */
 use App\Services\DayQueries;
 
@@ -93,10 +94,12 @@ $blocksLayout = page_blocks('admin-quote', [
                 nicht fest eingeteilt sind
                 <?php if ($maxBlocks !== null): ?>
                     und die erlaubten <?= (int) $maxBlocks ?> Zeitblöcke je Schüler:in noch nicht ausgeschöpft haben<?php endif; ?>.
-                Rot = Bedarf übersteigt das Angebot.
+                Bedarf, den du in anderen Zeitblöcken einträgst, wird mitgerechnet: verplante Schüler:innen zählen in
+                zeitgleichen Blöcken<?php if ($maxBlocks !== null): ?> und darüber hinaus (Höchstzahl Zeitblöcke)<?php endif; ?>
+                nicht mehr mit. Rot = Bedarf übersteigt das Angebot.
             </p>
             <?php if ($canEdit && $stations !== [] && $blocks !== []): ?>
-                <form method="post" action="<?= e($base . '/bedarf') ?>">
+                <form method="post" action="<?= e($base . '/bedarf') ?>" data-quota-max-blocks="<?= $maxBlocks !== null ? (int) $maxBlocks : '' ?>">
                     <?= $csrf->field() ?>
                     <?php foreach ($blocks as $block): ?>
                         <?php $bid = (int) $block['id']; ?>
@@ -127,13 +130,16 @@ $blocksLayout = page_blocks('admin-quote', [
                                 </tbody>
                             </table>
                         </div>
-                        <?php $blockAvail = 0; ?>
-                        <div class="chip-row mb-2" data-quota-balance="<?= $bid ?>" style="margin-top:8px;">
+                        <?php
+                        $blockAvail = 0;
+                        $overlapOthers = array_values(array_filter($blockOverlaps[$bid] ?? [], static fn (int $x): bool => $x !== $bid));
+                        ?>
+                        <div class="chip-row mb-2" data-quota-balance="<?= $bid ?>" data-quota-overlaps="<?= e(implode(',', $overlapOthers)) ?>" style="margin-top:8px;">
                             <?php foreach ($grades as $grade): ?>
                                 <?php $av = (int) ($availability[$bid][$grade] ?? 0); $blockAvail += $av; ?>
-                                <span class="badge" data-quota-grade="<?= $grade ?>" data-available="<?= $av ?>"><span>Stufe <?= e((string) $grade) ?>: <span data-quota-sum>0</span>&#8239;/&#8239;<?= $av ?></span></span>
+                                <span class="badge" data-quota-grade="<?= $grade ?>" data-available="<?= $av ?>"><span>Stufe <?= e((string) $grade) ?>: <span data-quota-sum>0</span>&#8239;/&#8239;<span data-quota-avail><?= $av ?></span></span></span>
                             <?php endforeach; ?>
-                            <span class="badge" data-quota-total data-available="<?= $blockAvail ?>"><span>Block gesamt: <span data-quota-sum>0</span>&#8239;/&#8239;<?= $blockAvail ?></span></span>
+                            <span class="badge" data-quota-total data-available="<?= $blockAvail ?>"><span>Block gesamt: <span data-quota-sum>0</span>&#8239;/&#8239;<span data-quota-avail><?= $blockAvail ?></span></span></span>
                         </div>
                     <?php endforeach; ?>
                     <button class="btn btn-primary mt-2" type="submit">Bedarf speichern</button>

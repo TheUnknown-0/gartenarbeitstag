@@ -11,7 +11,8 @@ use Tests\Support\Fixtures;
 /**
  * Quotenmodus: die Zuteilung hält die am Aktionstag erlaubte Höchstzahl
  * Zeitblöcke je Schüler:in ein (garden_days.max_blocks_per_student) — auch
- * gegenüber bereits bestehenden manuellen Einschreibungen.
+ * gegenüber bereits bestehenden manuellen Einschreibungen — und teilt niemanden
+ * in zwei zeitlich überlappende Zeitblöcke ein.
  */
 final class QuotaAssignTest extends DatabaseTestCase
 {
@@ -133,6 +134,30 @@ final class QuotaAssignTest extends DatabaseTestCase
         self::assertSame([], $report['conflicts']);
         foreach ($this->assignedBlockCounts($dayId) as $n) {
             self::assertSame(2, $n);
+        }
+    }
+
+    public function testUeberlappendeBloeckeSchliessenSichAus(): void
+    {
+        // „Ganztag" (08–12) überlappt „Kurz" (08–10); keine Höchstzahl gesetzt.
+        $day = $this->createDay(['mode' => 'quota', 'max_blocks_per_student' => null, 'name' => 'Overlap']);
+        $dayId = (int) $day['id'];
+        $long = $this->createBlock($dayId, 'Ganztag', '08:00:00', '12:00:00', 1);
+        $short = $this->createBlock($dayId, 'Kurz', '08:00:00', '10:00:00', 2);
+        $s = $this->createStation($dayId, 'Beet', [$long => 50, $short => 50]);
+        foreach (['eve', 'finn'] as $name) {
+            $this->createStudent($name, '9x', 9);
+        }
+        $this->db->run('INSERT INTO station_grade_demand (station_id, time_block_id, grade, demand) VALUES (?, ?, 9, 2), (?, ?, 9, 2)', [(int) $s['id'], $long, (int) $s['id'], $short]);
+
+        $report = $this->quota()->run($day);
+
+        // „Ganztag" (sort 1) wird zuerst befüllt: beide Personen. „Kurz" überlappt
+        // damit komplett → niemand mehr verfügbar, Bedarf 2 bleibt offen.
+        self::assertSame(2, $report['assigned_total']);
+        self::assertNotSame([], $report['conflicts']);
+        foreach ($this->assignedBlockCounts($dayId) as $n) {
+            self::assertSame(1, $n);
         }
     }
 }

@@ -22,9 +22,9 @@ $wrapStyle = $loginImage !== null
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="csrf-token" content="<?= e($csrf->token()) ?>">
     <title><?= e(isset($title) ? $title . ' · ' . $appName : $appName) ?></title>
-    <link rel="stylesheet" href="<?= e($baseUrl) ?>/assets/css/app.css">
+    <link rel="stylesheet" href="<?= e(asset('css/app.css', $baseUrl)) ?>">
     <?= $view->renderPartial('partials/theme') ?>
-    <script src="<?= e($baseUrl) ?>/assets/js/theme-init.js"></script>
+    <script src="<?= e(asset('js/theme-init.js', $baseUrl)) ?>"></script>
 </head>
 <body>
 <div class="minimal-wrap" style="<?= $wrapStyle ?>">
@@ -47,9 +47,9 @@ $wrapStyle = $loginImage !== null
         <?= $content ?>
     </div>
 </div>
-<script src="<?= e($baseUrl) ?>/assets/js/app.js"></script>
+<script src="<?= e(asset('js/app.js', $baseUrl)) ?>"></script>
 <?php foreach ($pageScripts ?? [] as $script): ?>
-    <script src="<?= e($baseUrl) ?>/assets/js/<?= e($script) ?>"></script>
+    <script src="<?= e(asset('js/' . $script, $baseUrl)) ?>"></script>
 <?php endforeach; ?>
 </body>
 </html>

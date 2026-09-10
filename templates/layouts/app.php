@@ -13,9 +13,9 @@ $appName = $ctx->settings->get('app_name') ?: 'Gartenarbeitstag';
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="csrf-token" content="<?= e($csrf->token()) ?>">
     <title><?= e(isset($title) ? $title . ' · ' . $appName : $appName) ?></title>
-    <link rel="stylesheet" href="<?= e($baseUrl) ?>/assets/css/app.css">
+    <link rel="stylesheet" href="<?= e(asset('css/app.css', $baseUrl)) ?>">
     <?= $view->renderPartial('partials/theme') ?>
-    <script src="<?= e($baseUrl) ?>/assets/js/theme-init.js"></script>
+    <script src="<?= e(asset('js/theme-init.js', $baseUrl)) ?>"></script>
 </head>
 <body>
 <div class="app-shell">
@@ -30,11 +30,11 @@ $appName = $ctx->settings->get('app_name') ?: 'Gartenarbeitstag';
     </div>
 </div>
 <?= $view->renderPartial('partials/arrange-bar') ?>
-<script src="<?= e($baseUrl) ?>/assets/js/app.js"></script>
-<script src="<?= e($baseUrl) ?>/assets/js/tour.js"></script>
-<script src="<?= e($baseUrl) ?>/assets/js/live-search.js"></script>
+<script src="<?= e(asset('js/app.js', $baseUrl)) ?>"></script>
+<script src="<?= e(asset('js/tour.js', $baseUrl)) ?>"></script>
+<script src="<?= e(asset('js/live-search.js', $baseUrl)) ?>"></script>
 <?php foreach ($pageScripts ?? [] as $script): ?>
-    <script src="<?= e($baseUrl) ?>/assets/js/<?= e($script) ?>"></script>
+    <script src="<?= e(asset('js/' . $script, $baseUrl)) ?>"></script>
 <?php endforeach; ?>
 </body>
 </html>

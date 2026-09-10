@@ -40,4 +40,4 @@ $roleOptions = [
         <button class="btn btn-primary btn-sm" type="button" data-arrange-save>💾 Speichern</button>
     </span>
 </div>
-<script src="<?= e($ctx->config['app']['base_url']) ?>/assets/js/arrange.js"></script>
+<script src="<?= e(asset('js/arrange.js', $ctx->config['app']['base_url'])) ?>"></script>

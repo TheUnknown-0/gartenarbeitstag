@@ -12,6 +12,20 @@ function e(mixed $value): string
     return htmlspecialchars((string) ($value ?? ''), ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
 }
 
+/**
+ * URL zu einer Datei unter public/assets/ inklusive Cache-Buster (?v=mtime),
+ * damit Browser nach einem Deploy nicht auf einer alten CSS-/JS-Fassung
+ * hängen bleiben.
+ */
+function asset(string $relativePath, string $baseUrl = ''): string
+{
+    $relativePath = ltrim($relativePath, '/');
+    $file = dirname(__DIR__) . '/public/assets/' . $relativePath;
+    $version = is_file($file) ? '?v=' . filemtime($file) : '';
+
+    return rtrim($baseUrl, '/') . '/assets/' . $relativePath . $version;
+}
+
 /** Formatiert ein Datum (Y-m-d oder DateTime) als deutsches Datum. */
 function format_date(mixed $date, string $format = 'd.m.Y'): string
 {

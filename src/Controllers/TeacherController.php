@@ -165,7 +165,7 @@ final class TeacherController extends Controller
 
         return $this->render('pages/teacher/station', [
             'title' => $station['name'],
-            'pageScripts' => ['attendance.js'],
+            'pageScripts' => ['combobox.js', 'attendance.js'],
             'day' => $day,
             'station' => $station,
             'leaders' => $this->leaders($stationId),

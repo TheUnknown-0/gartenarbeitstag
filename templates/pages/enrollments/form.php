@@ -26,7 +26,8 @@ use App\Services\DayQueries;
 
             <div class="field">
                 <label for="user_id">Schüler:in</label>
-                <select class="input" id="user_id" name="user_id" required data-check-field>
+                <select class="input" id="user_id" name="user_id" required data-check-field
+                        data-combobox="Name, Klasse oder Benutzername eintippen …">
                     <option value="">– bitte wählen –</option>
                     <?php foreach ($students as $s): ?>
                         <option value="<?= (int) $s['id'] ?>"<?= (int) $input['user_id'] === (int) $s['id'] ? ' selected' : '' ?>>

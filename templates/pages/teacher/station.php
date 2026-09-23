@@ -62,7 +62,8 @@ $attendanceEndpoint = $ctx->url('/api/anwesenheit');
                     <?= $csrf->field() ?>
                     <div class="field">
                         <label for="enroll-user">Schüler:in</label>
-                        <select class="input" id="enroll-user" name="user_id" required>
+                        <select class="input" id="enroll-user" name="user_id" required
+                                data-combobox="Name oder Klasse eintippen …">
                             <option value="">– bitte wählen –</option>
                             <?php foreach ($students as $class => $group): ?>
                                 <optgroup label="<?= e($class) ?>">

@@ -413,7 +413,7 @@ final class AdminEnrollmentsController extends Controller
 
         return $this->render('pages/enrollments/form', [
             'title' => 'Einschreibung anlegen',
-            'pageScripts' => ['enrollments.js'],
+            'pageScripts' => ['combobox.js', 'enrollments.js'],
             'day' => $day,
             'input' => $input,
             'students' => DayQueries::studentsOf($db),

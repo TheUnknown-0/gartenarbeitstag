@@ -524,6 +524,24 @@ body:has(.arrange-bar) .app-content { padding-bottom: 110px; }
 .menu-item:hover { background: var(--surface-2); text-decoration: none; }
 .menu-item.danger { color: var(--danger); }
 
+/* Durchsuchbare Auswahl (combobox.js) */
+.combobox { position: relative; }
+.combobox-list {
+  position: absolute; left: 0; right: 0; top: calc(100% + 4px); z-index: 60;
+  max-height: 18rem; overflow-y: auto; margin: 0; padding: 6px; list-style: none;
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--radius); box-shadow: var(--shadow-lg);
+}
+.combobox-list[hidden] { display: none; }
+.combobox-option {
+  display: flex; justify-content: space-between; gap: 12px;
+  padding: 8px 10px; border-radius: var(--radius-sm);
+  font-size: .93rem; cursor: pointer;
+}
+.combobox-option:hover, .combobox-option[aria-selected="true"] { background: var(--surface-2); }
+.combobox-meta { color: var(--ink-faint); font-size: .85rem; }
+.combobox-note { padding: 8px 10px; color: var(--ink-faint); font-size: .85rem; }
+
 /* ---------- Auth-/Minimal-Layout ---------- */
 .minimal-wrap {
   min-height: 100vh; display: flex; align-items: center; justify-content: center;
